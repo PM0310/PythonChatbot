@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Order Assistant | Centroid</title>
+    <style>
+        /* 1. Main Layout & Variables */
+        :root {
+            --sidebar-bg: #f9f9f9;
+            --border-color: #e5e5e5;
+            --user-bubble: #f4f4f4;
+            --text-main: #0d0d0d;
+            --accent: #555555;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            color: var(--text-main);
+        }
+
+        /* 2. Sidebar - Fields Collected */
+        #sidebar {
+            width: 280px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #sidebar h3 { font-size: 1.1rem; color: var(--accent); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        
+        .field-list { list-style: none; padding: 0; flex-grow: 1; }
+        .field-item { margin-bottom: 10px; font-size: 0.9rem; }
+        .field-item b { display: block; color: #333; }
+        .field-item span { color: #666; font-family: monospace; }
+
+        .reset-btn {
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .reset-btn:hover { background: #eee; }
+
+        /* 3. Main Chat Area */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+        }
+
+        header { padding: 15px 40px; border-bottom: 1px solid var(--border-color); }
+        header h1 { margin: 0; font-size: 1.5rem; }
+        header span { font-size: 0.85rem; color: gray; }
+
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 4. Chat Bubbles */
+        .message { margin-bottom: 25px; max-width: 80%; line-height: 1.6; font-size: 16px; }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--user-bubble);
+            padding: 12px 20px;
+            border-radius: 20px 20px 4px 20px;
+        }
+
+        .bot-message {
+            align-self: flex-start;
+            padding: 0 10px;
+        }
+
+        /* 5. Input Bar - Pinned at Bottom */
+        #input-area {
+            padding: 20px 40px 40px 40px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            display: flex;
+            background: #f9f9f9;
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 5px 15px;
+        }
+
+        input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 12px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .mic-btn, .send-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h3>📋 Fields Collected</h3>
+        <ul class="field-list" id="field-list">
+            <li class="field-item"><i>No fields collected yet.</i></li>
+        </ul>
+        <button class="reset-btn" onclick="window.location.reload()">🔄 Reset / Start Over</button>
+    </div>
+
+    <main>
+        <header>
+            <h1>📦 Sales Order Assistant</h1>
+            <span>🚀 Presented by <b>CENTROID</b></span>
+        </header>
+
+        <div id="chat-container">
+            <div class="message bot-message">
+                👋 Welcome to the Centroid Sales Order Assistant! How can I help you today?
+            </div>
+        </div>
+
+        <div id="input-area">
+            <button class="mic-btn" title="Click to speak">🎙️</button>
+            <div class="input-wrapper">
+                <input type="text" id="user-input" placeholder="Try: 'Create order for CM94532'..." onkeypress="handleKey(event)">
+                <button class="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const fieldList = document.getElementById('field-list');
+
+        // Logic to add messages to the screen
+        function appendMessage(text, isUser) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            msgDiv.innerText = text;
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // 1. Add User message
+            appendMessage(text, true);
+            userInput.value = '';
+
+            // 2. Simulate Bot Logic (This is where your Python logic would link)
+            setTimeout(() => {
+                const botReply = "I've noted that. Please provide the Customer PO Number.";
+                appendMessage(botReply, false);
+                updateSidebar("Customer PO", "PENDING...");
+            }, 800);
+        }
+
+        function updateSidebar(field, value) {
+            // Clears placeholder on first entry
+            if(fieldList.innerText.includes("No fields")) fieldList.innerHTML = '';
+            
+            const li = document.createElement('li');
+            li.className = 'field-item';
+            li.innerHTML = `<b>${field}:</b> <span>${value}</span>`;
+            fieldList.appendChild(li);
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+generate_search_html(r

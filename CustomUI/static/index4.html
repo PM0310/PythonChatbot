@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Order Chatbot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --bg-chat: #ffffff;
+            --text: #1a1a1a;
+            --text-muted: #6b7280;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --user-bubble: #2563eb;
+            --user-text: #ffffff;
+            --bot-bubble: #e5e7eb;
+            --bot-text: #1a1a1a;
+            --border: #e5e7eb;
+            --shadow: 0 4px 24px rgba(0,0,0,0.08);
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-wrapper {
+            width: 100%;
+            max-width: 1400px;
+            height: 95vh;
+            background: var(--bg-chat);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        /* Header */
+        .chat-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .chat-header .icon {
+            width: 40px; height: 40px;
+            background: var(--accent);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; color: white;
+        }
+        .chat-header h1 { font-size: 1.1rem; font-weight: 700; }
+        .chat-header p  { font-size: 0.8rem; color: var(--text-muted); }
+
+        /* Messages area */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 10px;
+            max-width: 95%;
+            animation: fadeIn 0.25s ease;
+        }
+        .message.user   { align-self: flex-end; flex-direction: row-reverse; }
+        .message.bot     { align-self: flex-start; }
+
+        .avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .message.user .avatar { background: var(--user-bubble); color: white; }
+        .message.bot  .avatar { background: var(--bot-bubble); }
+
+        .bubble {
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            line-height: 1.55;
+            font-size: 0.92rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .message.user .bubble { background: var(--user-bubble); color: var(--user-text); border-bottom-right-radius: 4px; }
+        .message.bot  .bubble { background: var(--bot-bubble); color: var(--bot-text); border-bottom-left-radius: 4px; }
+
+        /* Order card */
+        .order-card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            max-width: 100%;
+        }
+        .order-card h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+        .order-table th {
+            background: var(--accent);
+            color: white;
+            padding: 8px 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .order-table td {
+            padding: 7px 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .order-table tr:nth-child(even) { background: #f1f5f9; }
+
+        /* AI Summary card */
+        .ai-summary-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+            border: 1px solid #c7d2fe;
+            border-radius: 12px;
+            padding: 16px 20px;
+            max-width: 100%;
+            animation: fadeIn 0.4s ease;
+            margin-top: 4px;
+        }
+        .ai-summary-card .ai-header {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.82rem; font-weight: 700; color: var(--accent);
+            margin-bottom: 8px; text-transform: uppercase;
+        }
+        .ai-summary-card .ai-body { font-size: 0.88rem; color: var(--text); line-height: 1.6; }
+        .ai-summary-card .ai-actions {
+            display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #c7d2fe;
+        }
+
+        .btn-pdf {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 14px; background: var(--accent); color: white;
+            border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-pdf:hover { background: var(--accent-hover); }
+        .btn-pdf:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .btn-stop {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 14px; background: #dc2626; color: white;
+            border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-stop:hover { background: #b91c1c; }
+
+        .btn-start {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 14px; background: #059669; color: white;
+            border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-start:hover { background: #047857; }
+
+        .btn-email {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 14px; background: #7c3aed; color: white;
+            border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-email:hover { background: #6d28d9; }
+
+        .auto-loop-panel {
+            background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
+            padding: 14px 18px; margin-bottom: 10px; font-size: 0.85rem;
+        }
+        .auto-loop-panel.active { background: #fef3c7; border-color: #fde68a; }
+        .auto-loop-panel.stopped { background: #f8fafc; border-color: #e2e8f0; }
+
+        .status-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: 0.75rem; font-weight: 600;
+        }
+        .status-badge.running { background: #dcfce7; color: #166534; }
+        .status-badge.stopped { background: #fee2e2; color: #991b1b; }
+
+        .email-input {
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+            font-size: 0.85rem; width: 220px; outline: none;
+        }
+        .email-input:focus { border-color: var(--accent); }
+
+        /* Input bar */
+        .input-bar {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            background: var(--bg-chat);
+        }
+        .input-bar input {
+            flex: 1; padding: 12px 16px; border: 1px solid var(--border);
+            border-radius: 12px; font-size: 0.92rem; outline: none;
+        }
+        .input-bar input:focus { border-color: var(--accent); }
+        .input-bar button {
+            padding: 12px 20px; background: var(--accent); color: white;
+            border: none; border-radius: 12px; font-size: 0.92rem; font-weight: 600; cursor: pointer;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-wrapper">
+    <div class="chat-main">
+        <div class="chat-header">
+            <div class="icon">📦</div>
+            <div style="flex:1;">
+                <h1>Sales Order Assistant</h1>
+                <p>Ask me to look up any sales order</p>
+            </div>
+            <div id="loopControls" style="display:flex;align-items:center;gap:8px;">
+                <input type="email" id="loopEmail" class="email-input" placeholder="Email for auto-loop" value="">
+                <button class="btn-start" id="startLoopBtn" onclick="startAutoLoop()">▶ Start Auto Email</button>
+                <button class="btn-stop" id="stopLoopBtn" onclick="stopAutoLoop()" style="display:none;">⏹ Stop</button>
+                <span id="loopBadge" class="status-badge stopped" style="display:none;"></span>
+            </div>
+        </div>
+
+        <div id="loopStatusPanel" class="auto-loop-panel stopped" style="display:none;margin:12px 24px 0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <b>🔄 Auto Email Loop</b> — <span id="loopStatusText">Stopped</span>
+                </div>
+                <button class="btn-stop" onclick="stopAutoLoop()" style="padding:4px 10px;font-size:0.75rem;">⏹ Stop Loop</button>
+            </div>
+            <div id="loopDetails" style="margin-top:6px;font-size:0.8rem;color:#6b7280;"></div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <div class="input-bar">
+            <input type="text" id="chatInput" placeholder="Try: 'Get order 67965' or 'All customers'" autocomplete="off">
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var chatMessages = document.getElementById("chatMessages");
+    var chatInput    = document.getElementById("chatInput");
+    var sendBtn      = document.getElementById("sendBtn");
+
+    addBot("Welcome! I'm the **Sales Order Assistant**.\n\nYou can ask:\n• **Get order 67965**\n• **Customer orders for Vision Operations**\n• **All customers**");
+
+    chatInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
+    window.sendMessage = function() {
+        var text = chatInput.value.trim();
+        if (!text) return;
+        addUser(text);
+        chatInput.value = "";
+        
+        sendBtn.disabled = true;
+
+        fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.type === "order") {
+                addOrderCard(data.reply);
+                if (data.ai_summary) addAiSummaryCard(data.ai_summary);
+            } else if (data.type === "customer_orders") {
+                addCustomerOrdersCard(data.reply);
+                if (data.ai_summary) addAiSummaryCard(data.ai_summary);
+            } else {
+                addBot(data.reply);
+            }
+        })
+        .catch(function(err) {
+            addBot("Network error: " + err.message);
+        })
+        .finally(function() {
+            sendBtn.disabled = false;
+        });
+    };
+
+    function addUser(text) {
+        var msg = el("div", "message user");
+        msg.innerHTML = '<div class="avatar">You</div><div class="bubble">' + text + '</div>';
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function addBot(text) {
+        var msg = el("div", "message bot");
+        msg.innerHTML = '<div class="avatar">🤖</div><div class="bubble">' + text.replace(/\n/g, '<br>') + '</div>';
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function addAiSummaryCard(summaryText) {
+        if (!summaryText) return;
+        var msg = el("div", "message bot");
+        var card = '<div class="ai-summary-card">';
+        card += '<div class="ai-header">✨ AI Summary</div>';
+        card += '<div class="ai-body">' + summaryText + '</div>';
+        card += '<div class="ai-actions">';
+        card += '<button class="btn-pdf" id="downloadPdfBtn" onclick="downloadPdf()">📄 Download PDF</button>';
+        card += '<button class="btn-email" onclick="sendEmailPrompt()">📧 Send Email</button>';
+        card += '</div></div>';
+        msg.innerHTML = '<div class="avatar">🤖</div>' + card;
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    // ── Email Sending ──
+    window.sendEmailPrompt = function() {
+        var email = prompt("Enter recipient email address:");
+        if (!email || !email.includes("@")) return;
+        addBot("📧 Sending email to " + email + "...");
+        fetch("/api/send-email", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({to_email: email})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { addBot(d.reply || d.message || "Done."); })
+        .catch(function(e) { addBot("❌ Error: " + e.message); });
+    };
+
+    // ── Auto Loop Controls ──
+    var _loopPollInterval = null;
+
+    window.startAutoLoop = function() {
+        var email = document.getElementById("loopEmail").value.trim();
+        if (!email || !email.includes("@")) { alert("Enter a valid email address."); return; }
+
+        fetch("/api/auto-loop/start", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({to_email: email})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) {
+                addBot("✅ Auto email loop started! Sending reports for each customer to " + email + ".\nUse the ⏹ Stop button to halt.");
+                showLoopRunning();
+                startPollingStatus();
+            } else {
+                addBot("❌ " + (d.error || "Failed to start."));
+            }
+        })
+        .catch(function(e) { addBot("❌ Error: " + e.message); });
+    };
+
+    window.stopAutoLoop = function() {
+        fetch("/api/auto-loop/stop", { method: "POST" })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            addBot("⏹ Auto email loop stopped.");
+            showLoopStopped();
+            stopPollingStatus();
+        })
+        .catch(function(e) { addBot("❌ Error: " + e.message); });
+    };
+
+    function showLoopRunning() {
+        document.getElementById("startLoopBtn").style.display = "none";
+        document.getElementById("stopLoopBtn").style.display = "";
+        var badge = document.getElementById("loopBadge");
+        badge.style.display = "";
+        badge.className = "status-badge running";
+        badge.textContent = "RUNNING";
+        var panel = document.getElementById("loopStatusPanel");
+        panel.style.display = "";
+        panel.className = "auto-loop-panel active";
+    }
+
+    function showLoopStopped() {
+        document.getElementById("startLoopBtn").style.display = "";
+        document.getElementById("stopLoopBtn").style.display = "none";
+        var badge = document.getElementById("loopBadge");
+        badge.className = "status-badge stopped";
+        badge.textContent = "STOPPED";
+        setTimeout(function() { badge.style.display = "none"; }, 3000);
+        var panel = document.getElementById("loopStatusPanel");
+        panel.className = "auto-loop-panel stopped";
+        document.getElementById("loopStatusText").textContent = "Stopped";
+        setTimeout(function() { panel.style.display = "none"; }, 5000);
+    }
+
+    function startPollingStatus() {
+        stopPollingStatus();
+        _loopPollInterval = setInterval(function() {
+            fetch("/api/auto-loop/status")
+            .then(function(r) { return r.json(); })
+            .then(function(s) {
+                if (!s.active) { showLoopStopped(); stopPollingStatus(); return; }
+                document.getElementById("loopStatusText").textContent = "Active — " + (s.current_customer || "starting...");
+                var details = "Processed: " + s.processed + " / " + s.total_customers + " customers";
+                if (s.last_status) details += " | Last: " + s.last_status;
+                document.getElementById("loopDetails").textContent = details;
+            });
+        }, 4000);
+    }
+
+    function stopPollingStatus() {
+        if (_loopPollInterval) { clearInterval(_loopPollInterval); _loopPollInterval = null; }
+    }
+
+    // Check loop status on page load
+    fetch("/api/auto-loop/status").then(function(r) { return r.json(); }).then(function(s) {
+        if (s.active) { showLoopRunning(); startPollingStatus(); }
+    }).catch(function() {});
+
+    window.downloadPdf = function() {
+        var btn = document.getElementById('downloadPdfBtn');
+        var originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ Generating PDF... Please Wait';
+        btn.disabled = true;
+
+        fetch('/api/download-pdf')
+        .then(function(r) {
+            if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || 'PDF generation failed'); });
+            return r.blob();
+        })
+        .then(function(blob) {
+            var url = window.URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'Order_Report.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            addBot('✅ PDF downloaded successfully! Contains all response data in the corporate tabular format.');
+        })
+        .catch(function(err) {
+            console.error(err);
+            addBot('❌ Error downloading PDF. The report might be too large or the server encountered an error.');
+        })
+        .finally(function() {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    };
+
+    function addOrderCard(order) {
+        var msg = el("div", "message bot");
+        var card = '<div class="order-card"><h3>📋 Order #' + order.order_number + '</h3>';
+        if (order.lines && order.lines.length > 0) {
+            card += '<div style="overflow-x:auto;"><table class="order-table"><thead><tr><th>Line</th><th>Item</th><th>Qty</th><th>Status</th></tr></thead><tbody>';
+            for (var i = 0; i < order.lines.length; i++) {
+                var ln = order.lines[i];
+                card += '<tr><td>'+(ln.Line||'')+'</td><td>'+(ln.Item||'')+'</td><td>'+(ln.Qty||'')+'</td><td>'+(ln.Status||'')+'</td></tr>';
+            }
+            card += '</tbody></table></div>';
+        }
+        card += '</div>';
+        msg.innerHTML = '<div class="avatar">🤖</div>' + card;
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function addCustomerOrdersCard(data) {
+        var msg = el("div", "message bot");
+        msg.style.maxWidth = "100%";
+        var card = '<div class="order-card">';
+        card += '<h3>👤 Customer Orders — ' + esc(data.customer_name || 'Unknown') + '</h3>';
+        card += '<p style="font-size:0.85rem;color:#6b7280;margin-bottom:10px;">Total: <b>' + (data.count || 0) + '</b> record(s)</p>';
+        if (data.rows && data.rows.length > 0) {
+            var columns = [
+                {key: "CUSTOMER_NAME", label: "Customer"},
+                {key: "ORDER_NUMBER", label: "Order #"},
+                {key: "ORDER_DATE", label: "Order Date"},
+                {key: "PO_NUMBER", label: "PO Number"},
+                {key: "ORDER_TYPE", label: "Order Type"},
+                {key: "ITEM_NUMBER", label: "Item"},
+                {key: "LINE_NUMBER", label: "Line #"},
+                {key: "ORDERED_QTY", label: "Qty"},
+                {key: "ORDERED_UOM", label: "UOM"},
+                {key: "UNIT_LIST_PRICE", label: "List Price"},
+                {key: "UNIT_SELLING_PRICE", label: "Sell Price"},
+                {key: "LINE_PRICE", label: "Line Total"},
+                {key: "HEADER_STATUS", label: "Header Status"},
+                {key: "LINE_STATUS", label: "Line Status"},
+                {key: "SCHEDULE_SHIP_DATE", label: "Sched Ship"},
+                {key: "ACTUAL_SHIP_DATE", label: "Actual Ship"},
+                {key: "SHIPMENT_MODE", label: "Ship Mode"},
+                {key: "INVOICE_BALANCE", label: "Invoice Bal"},
+                {key: "BACKORDER_FLAG", label: "Backorder"},
+                {key: "DELAYED_ORDER_FLAG", label: "Delayed"},
+                {key: "IN_TRANSIT_ORDER_FLAG", label: "In Transit"},
+                {key: "ORDER_HOLD_FLAG", label: "Hold"},
+                {key: "RELEASED_STATUS", label: "Release"},
+                {key: "EMAIL", label: "Email"}
+            ];
+            // Filter to columns that exist in the data
+            var sample = data.rows[0];
+            var activeCols = [];
+            for (var c = 0; c < columns.length; c++) {
+                if (sample.hasOwnProperty(columns[c].key)) activeCols.push(columns[c]);
+            }
+            card += '<div style="max-height:500px;overflow:auto;">';
+            card += '<table class="order-table" style="font-size:0.78rem;white-space:nowrap;"><thead><tr>';
+            for (var c = 0; c < activeCols.length; c++) {
+                card += '<th>' + activeCols[c].label + '</th>';
+            }
+            card += '</tr></thead><tbody>';
+            var limit = Math.min(data.rows.length, 200);
+            for (var i = 0; i < limit; i++) {
+                var row = data.rows[i];
+                card += '<tr>';
+                for (var j = 0; j < activeCols.length; j++) {
+                    var key = activeCols[j].key;
+                    var val = row[key];
+                    if (val === null || val === undefined) val = '';
+                    val = String(val);
+                    var style = '';
+                    // Status color coding
+                    if (key === 'HEADER_STATUS' || key === 'LINE_STATUS') {
+                        var sv = val.toUpperCase();
+                        if (sv.indexOf('CANCEL') >= 0) style = 'color:#dc2626;font-weight:600;';
+                        else if (sv.indexOf('BOOK') >= 0) style = 'color:#059669;font-weight:600;';
+                        else if (sv.indexOf('ENTER') >= 0) style = 'color:#2563eb;font-weight:600;';
+                        else if (sv.indexOf('CLOSED') >= 0) style = 'color:#6b7280;font-weight:600;';
+                        else if (sv.indexOf('AWAIT') >= 0) style = 'color:#d97706;font-weight:600;';
+                        else if (sv.indexOf('SHIP') >= 0) style = 'color:#059669;font-weight:600;';
+                        else if (sv.indexOf('FULFILL') >= 0) style = 'color:#7c3aed;font-weight:600;';
+                    }
+                    // Flag highlighting
+                    if ((key === 'BACKORDER_FLAG' || key === 'DELAYED_ORDER_FLAG' || key === 'ORDER_HOLD_FLAG') && (val === '1' || val.toUpperCase() === 'Y')) {
+                        style = 'color:#dc2626;font-weight:600;';
+                        val = '⚠ Yes';
+                    } else if ((key === 'BACKORDER_FLAG' || key === 'DELAYED_ORDER_FLAG' || key === 'ORDER_HOLD_FLAG' || key === 'IN_TRANSIT_ORDER_FLAG') && (val === '0' || val.toUpperCase() === 'N')) {
+                        val = 'No';
+                    }
+                    if (key === 'IN_TRANSIT_ORDER_FLAG' && val === '1') { style = 'color:#d97706;font-weight:600;'; val = '🚚 Yes'; }
+                    // Currency formatting
+                    if ((key === 'LINE_PRICE' || key === 'UNIT_LIST_PRICE' || key === 'UNIT_SELLING_PRICE' || key === 'INVOICE_BALANCE') && val && !isNaN(parseFloat(val))) {
+                        val = '$' + parseFloat(val).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    }
+                    // Order number link
+                    if (key === 'ORDER_NUMBER') {
+                        style += 'color:var(--accent);font-weight:600;cursor:pointer;';
+                        card += '<td style="' + style + '" onclick="sendMessage(\'get order ' + val + '\')">' + esc(val) + '</td>';
+                    } else {
+                        card += '<td style="' + style + '">' + esc(val) + '</td>';
+                    }
+                }
+                card += '</tr>';
+            }
+            card += '</tbody></table></div>';
+            if (data.rows.length > 200) card += '<p style="font-size:0.8rem;color:#6b7280;margin-top:10px;">Showing top 200 of ' + data.rows.length + ' rows. Download PDF for complete data.</p>';
+        } else {
+            card += '<p style="color:#6b7280;">No orders found—this customer is new or hasn\'t placed orders yet. Want to create one?</p>';
+        }
+        card += '</div>';
+        msg.innerHTML = '<div class="avatar">🤖</div>' + card;
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function el(tag, cls) { var d = document.createElement(tag); d.className = cls; return d; }
+    function scroll() { chatMessages.scrollTop = chatMessages.scrollHeight; }
+
+})();
+</script>
+</body>
+</html>

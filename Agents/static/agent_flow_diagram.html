@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agent Flow Diagram</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+    }
+    h2 { color: #333; margin-bottom: 10px; }
+    #diagram-container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      padding: 30px 40px;
+      max-width: 960px;
+      width: 100%;
+    }
+    .btn-row {
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+    }
+    button {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    #btn-png  { background: #0078d4; color: white; }
+    #btn-svg  { background: #107c10; color: white; }
+    button:hover { opacity: 0.88; }
+  </style>
+</head>
+<body>
+  <h2>Sales Order Agent — Flow Diagram</h2>
+  <div id="diagram-container">
+    <div class="mermaid">
+flowchart TD
+    A([User Message]) --> B[POST /api/chat]
+    B --> C{Quick greeting?\nhi / help / hello}
+    C -- Yes --> D([Static Reply])
+    C -- No --> E[ai_extract_intent\nLLM classifies intent]
+
+    E --> F{Guardrail Override}
+    F -- create / new / place + order --> G[force action = create]
+    F -- top / highly ordered items --> H[force action = highly_ordered_items]
+    F -- no override --> I{should_route_to_dynamic_query?}
+    G --> J{Route by Action}
+    H --> J
+    I -- Yes --> K[action = dynamic_query]
+    I -- No --> J
+    K --> J
+
+    J -- create --> L[Validate Item & Customer\nOracle DB lookup]
+    J -- add_line --> M([Return add_line_form])
+    J -- email --> N([Return email_form])
+    J -- highly_ordered_items --> O[get_highly_ordered_items\nOracle DB]
+    J -- get / track / query --> P[dynamic Oracle SQL\nget_orders_advanced]
+
+    L --> Q([Return create_form\nwith prefilled data])
+    O --> R[AI Summary\npydantic_ai_adapter]
+    P --> R
+    R --> S([JSON Response\n+ ui_state metadata])
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button id="btn-png">Download PNG</button>
+    <button id="btn-svg">Download SVG</button>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+
+    function getSvgElement() {
+      return document.querySelector('#diagram-container svg');
+    }
+
+    document.getElementById('btn-svg').addEventListener('click', () => {
+      const svg = getSvgElement();
+      if (!svg) return alert('Diagram not ready yet.');
+      const data = new XMLSerializer().serializeToString(svg);
+      const blob = new Blob([data], { type: 'image/svg+xml' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'agent_flow_diagram.svg';
+      a.click();
+    });
+
+    document.getElementById('btn-png').addEventListener('click', () => {
+      const svg = getSvgElement();
+      if (!svg) return alert('Diagram not ready yet.');
+
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      img.onload = () => {
+        const scale = 2; // retina quality
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.naturalWidth  * scale;
+        canvas.height = img.naturalHeight * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+
+        const a = document.createElement('a');
+        a.download = 'agent_flow_diagram.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      };
+      img.src = url;
+    });
+  </script>
+</body>
+</html>

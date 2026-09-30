@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Order AI Agent</title>
+    <style>
+        :root {
+            --bg: #f3f6fb;
+            --panel: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --accent: #0f766e;
+            --accent-2: #14b8a6;
+            --bot: #e6fffa;
+            --user: #0f766e;
+            --border: #dbe5ef;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            background: radial-gradient(circle at top right, #ccfbf1, #f3f6fb 40%);
+            color: var(--text);
+        }
+        .wrap {
+            max-width: 1100px;
+            margin: 22px auto;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 16px 42px rgba(2, 6, 23, 0.08);
+        }
+        .head {
+            padding: 16px 18px;
+            background: linear-gradient(90deg, #0f766e, #115e59);
+            color: #fff;
+        }
+        .head h1 { margin: 0; font-size: 20px; }
+        .head p { margin: 6px 0 0; opacity: 0.9; font-size: 13px; }
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            background: #f8fafc;
+        }
+        .chip {
+            border: 1px solid #99f6e4;
+            color: #134e4a;
+            background: #f0fdfa;
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .chat {
+            height: 62vh;
+            overflow: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #fff;
+        }
+        .m { display: flex; max-width: 90%; gap: 10px; }
+        .m.user { align-self: flex-end; flex-direction: row-reverse; }
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 12px;
+            background: #d1fae5;
+        }
+        .m.user .avatar { background: #ccfbf1; }
+        .bub {
+            border-radius: 12px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.45;
+            font-size: 14px;
+        }
+        .m.bot .bub { background: var(--bot); }
+        .m.user .bub { background: var(--user); color: #fff; border-color: var(--user); }
+        .controls {
+            border-top: 1px solid var(--border);
+            padding: 12px;
+            display: flex;
+            gap: 8px;
+            background: #f8fafc;
+        }
+        input[type="text"] {
+            flex: 1;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 14px;
+        }
+        button {
+            border: 0;
+            border-radius: 10px;
+            padding: 0 16px;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px;
+            overflow: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 6px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #e2e8f0; }
+        details { margin-top: 8px; }
+        .err { color: #b91c1c; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="head">
+            <h1>Sales Order AI Agent</h1>
+            <p>Tool-using agent mode with step trace and safety guardrails</p>
+        </div>
+
+        <div class="chips">
+            <button class="chip" onclick="quick('Get order 67965')">Get order</button>
+            <button class="chip" onclick="quick('Show orders this month')">This month orders</button>
+            <button class="chip" onclick="quick('Show booked orders for Vision')">Booked + customer</button>
+            <button class="chip" onclick="quick('Track order 67965 with shipping details')">Tracking details</button>
+            <button class="chip" onclick="quick('Create order for Vision with item AS54888 qty 2')">Create order draft</button>
+        </div>
+
+        <div id="chat" class="chat"></div>
+
+        <div class="controls">
+            <input id="msg" type="text" placeholder="Ask the AI agent for order operations..." />
+            <button id="send" onclick="sendMsg()">Run Agent</button>
+        </div>
+    </div>
+
+<script>
+const chatEl = document.getElementById('chat');
+const msgEl = document.getElementById('msg');
+const sendBtn = document.getElementById('send');
+let history = [];
+
+function esc(v) {
+    return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function addMsg(role, html) {
+    const row = document.createElement('div');
+    row.className = 'm ' + role;
+    row.innerHTML = `<div class="avatar">${role === 'user' ? 'You' : 'AI'}</div><div class="bub">${html}</div>`;
+    chatEl.appendChild(row);
+    chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function quick(text) {
+    msgEl.value = text;
+    sendMsg();
+}
+
+function renderTrace(trace) {
+    if (!Array.isArray(trace) || !trace.length) return '';
+    let html = '<details><summary>Agent Trace</summary><div class="card"><table><thead><tr><th>Time</th><th>Step</th><th>Detail</th></tr></thead><tbody>';
+    trace.forEach(t => {
+        html += `<tr><td>${esc(t.time || '')}</td><td>${esc(t.step || '')}</td><td>${esc(t.detail || '')}</td></tr>`;
+    });
+    html += '</tbody></table></div></details>';
+    return html;
+}
+
+function renderTable(columns, rows, title, sql) {
+    let html = `<div><strong>${esc(title || 'Query Results')}</strong></div>`;
+    html += '<div class="card"><table><thead><tr>';
+    (columns || []).forEach(c => html += `<th>${esc(c)}</th>`);
+    html += '</tr></thead><tbody>';
+    (rows || []).forEach(r => {
+        html += '<tr>';
+        r.forEach(v => html += `<td>${esc(v)}</td>`);
+        html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    if (sql) {
+        html += `<details><summary>Generated SQL</summary><div class="card"><pre>${esc(sql)}</pre></div></details>`;
+    }
+    return html;
+}
+
+function renderResponse(data) {
+    if (!data) return addMsg('bot', '<span class="err">No response.</span>');
+
+    let html = '';
+    if (data.type === 'dynamic_table') {
+        html = renderTable(data.columns, data.rows, data.explanation, data.sql);
+    } else if (data.type === 'order' || data.type === 'customer_orders' || data.type === 'orders_advanced') {
+        html = `<div class="card"><pre>${esc(JSON.stringify(data.reply, null, 2))}</pre></div>`;
+    } else if (data.type === 'create_form') {
+        html = '<div class="card">Agent prepared a create-order draft. Use your existing create order endpoint or UI form to confirm and submit.</div>';
+    } else if (data.type === 'email_form') {
+        html = '<div class="card">Agent prepared an email action. Use your email form endpoint to confirm recipient and send.</div>';
+    } else if (data.type === 'error') {
+        html = `<span class="err">${esc(data.reply || 'Error')}</span>`;
+    } else {
+        html = esc(data.reply || 'Done.');
+    }
+
+    if (data.ai_summary) {
+        html += `<div style="margin-top:8px;"><strong>AI Summary:</strong> ${esc(data.ai_summary)}</div>`;
+    }
+
+    html += renderTrace(data.agent_trace);
+    addMsg('bot', html);
+
+    const replyText = data.reply && typeof data.reply === 'string' ? data.reply : (data.explanation || data.type || 'response');
+    history.push({ role: 'assistant', content: String(replyText) });
+    if (history.length > 24) history = history.slice(-24);
+}
+
+function sendMsg() {
+    const text = msgEl.value.trim();
+    if (!text) return;
+
+    addMsg('user', esc(text));
+    history.push({ role: 'user', content: text });
+    if (history.length > 24) history = history.slice(-24);
+
+    msgEl.value = '';
+    sendBtn.disabled = true;
+
+    fetch('/api/agent-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history })
+    })
+    .then(r => r.json())
+    .then(renderResponse)
+    .catch(e => addMsg('bot', `<span class="err">Network error: ${esc(e.message)}</span>`))
+    .finally(() => { sendBtn.disabled = false; });
+}
+
+msgEl.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Enter') sendMsg();
+});
+
+addMsg('bot', 'Agent mode is ready. Ask for order operations and I will execute tools with a visible trace.');
+</script>
+</body>
+</html>

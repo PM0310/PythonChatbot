@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Order Chatbot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --bg-chat: #ffffff;
+            --text: #1a1a1a;
+            --text-muted: #6b7280;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --user-bubble: #2563eb;
+            --user-text: #ffffff;
+            --bot-bubble: #e5e7eb;
+            --bot-text: #1a1a1a;
+            --border: #e5e7eb;
+            --shadow: 0 4px 24px rgba(0,0,0,0.08);
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-wrapper {
+            width: 100%;
+            max-width: 1100px;
+            height: 95vh;
+            background: var(--bg-chat);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        /* Header */
+        .chat-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .chat-header .icon {
+            width: 40px; height: 40px;
+            background: var(--accent);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; color: white;
+        }
+        .chat-header h1 { font-size: 1.1rem; font-weight: 700; }
+        .chat-header p  { font-size: 0.8rem; color: var(--text-muted); }
+
+        /* Messages area */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 10px;
+            max-width: 85%;
+            animation: fadeIn 0.25s ease;
+        }
+        .message.user   { align-self: flex-end; flex-direction: row-reverse; }
+        .message.bot     { align-self: flex-start; }
+
+        .avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .message.user .avatar { background: var(--user-bubble); color: white; }
+        .message.bot  .avatar { background: var(--bot-bubble); }
+
+        .bubble {
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            line-height: 1.55;
+            font-size: 0.92rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .message.user .bubble { background: var(--user-bubble); color: var(--user-text); border-bottom-right-radius: 4px; }
+        .message.bot  .bubble { background: var(--bot-bubble); color: var(--bot-text); border-bottom-left-radius: 4px; }
+
+        .bubble strong { font-weight: 600; }
+
+        /* Order card */
+        .order-card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            max-width: 600px;
+        }
+        .order-card h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+        .order-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 20px;
+            margin-bottom: 14px;
+            font-size: 0.85rem;
+        }
+        .order-meta span.label { color: var(--text-muted); }
+        .order-meta span.value { font-weight: 600; }
+
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+        .order-table th {
+            background: var(--accent);
+            color: white;
+            padding: 8px 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .order-table th:first-child { border-radius: 8px 0 0 0; }
+        .order-table th:last-child  { border-radius: 0 8px 0 0; }
+        .order-table td {
+            padding: 7px 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .order-table tr:nth-child(even) { background: #f1f5f9; }
+
+        /* Input bar */
+        .input-bar {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            background: var(--bg-chat);
+        }
+        .input-bar input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-family: inherit;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .input-bar input:focus { border-color: var(--accent); }
+
+        .input-bar button {
+            padding: 12px 20px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .input-bar button:hover { background: var(--accent-hover); }
+        .input-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Mic button */
+        .mic-btn {
+            padding: 12px;
+            background: none;
+            color: var(--text);
+            border: 1px solid var(--border) !important;
+            border-radius: 12px;
+            font-size: 1.15rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            flex-shrink: 0;
+        }
+        .mic-btn:hover { background: #eef2ff; border-color: var(--accent) !important; }
+        .mic-btn.recording {
+            background: #fef2f2;
+            border-color: #dc2626 !important;
+            animation: pulse-mic 1.2s ease-in-out infinite;
+        }
+        @keyframes pulse-mic {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.25); }
+            50% { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
+        }
+        .voice-status {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            padding: 2px 24px 0;
+            min-height: 18px;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+        .typing-indicator span {
+            width: 8px; height: 8px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Quick chips */
+        .quick-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 0 24px 12px;
+        }
+        .chip {
+            padding: 8px 14px;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .chip:hover { background: #dbeafe; border-color: var(--accent); }
+
+        /* Scrollbar */
+        .chat-messages::-webkit-scrollbar { width: 6px; }
+        .chat-messages::-webkit-scrollbar-track { background: transparent; }
+        .chat-messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+        /* Error bubble */
+        .bubble.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .bubble.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+        /* AI Summary card */
+        .ai-summary-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+            border: 1px solid #c7d2fe;
+            border-radius: 12px;
+            padding: 16px 20px;
+            max-width: 600px;
+            animation: fadeIn 0.4s ease;
+            margin-top: 4px;
+        }
+        .ai-summary-card .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .ai-summary-card .ai-body {
+            font-size: 0.88rem;
+            color: var(--text);
+            line-height: 1.6;
+        }
+        .ai-summary-card .ai-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #c7d2fe;
+        }
+        .btn-pdf {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-pdf:hover { background: var(--accent-hover); }
+        .btn-pdf:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Create order form */
+        .create-form {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 600px;
+            animation: fadeIn 0.25s ease;
+        }
+        .create-form h3 {
+            font-size: 1rem;
+            margin-bottom: 14px;
+            color: var(--accent);
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .form-group.full { grid-column: 1 / -1; }
+        .form-group label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .form-group input, .form-group select {
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-family: inherit;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .form-group input:focus { border-color: var(--accent); }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .form-actions button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-submit { background: var(--accent); color: white; }
+        .btn-submit:hover { background: var(--accent-hover); }
+        .btn-cancel { background: var(--bg-tertiary, #f4f4f4); color: var(--text); }
+        .btn-cancel:hover { background: var(--border); }
+
+        /* Email preview */
+        .email-preview {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.82rem;
+            margin-top: 10px;
+        }
+        .email-preview-toggle {
+            font-size: 0.82rem;
+            color: var(--accent);
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 4px 0;
+            margin-top: 8px;
+            text-decoration: underline;
+        }
+
+        /* Settings Sidebar */
+        .settings-sidebar {
+            width: 300px;
+            min-width: 300px;
+            background: var(--bg, #f5f5f5);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+        .settings-sidebar.collapsed {
+            width: 0;
+            min-width: 0;
+            border-left: none;
+            overflow: hidden;
+        }
+        .settings-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .settings-section {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+        .settings-section h4 {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 10px;
+        }
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .setting-row label {
+            font-size: 0.85rem;
+            flex: 1;
+        }
+        .setting-input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            outline: none;
+            margin-bottom: 8px;
+        }
+        .setting-input:focus { border-color: var(--accent); }
+        .setting-select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            outline: none;
+            margin-bottom: 8px;
+            background: white;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 42px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: #d1d5db;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background: var(--accent);
+        }
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(18px);
+        }
+        .btn-sm {
+            padding: 7px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-sm.primary { background: var(--accent); color: white; }
+        .btn-sm.primary:hover { background: var(--accent-hover); }
+        .btn-sm.danger { background: #dc2626; color: white; }
+        .btn-sm.danger:hover { background: #b91c1c; }
+        .btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-badge.active { background: #dcfce7; color: #166534; }
+        .status-badge.inactive { background: #f3f4f6; color: #6b7280; }
+        .scheduler-info {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-top: 6px;
+        }
+        .settings-toggle-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            margin-left: auto;
+        }
+        .settings-toggle-btn:hover { background: var(--bg, #f5f5f5); }
+
+        @media (max-width: 640px) {
+            .chat-wrapper { height: 100vh; border-radius: 0; }
+            .order-meta { grid-template-columns: 1fr; }
+            .settings-sidebar { position: absolute; right: 0; top: 0; height: 100%; z-index: 10; box-shadow: -4px 0 12px rgba(0,0,0,0.1); }
+            .settings-sidebar.collapsed { width: 0; min-width: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-wrapper">
+    <div class="chat-main">
+    <div class="chat-header">
+        <div class="icon">📦</div>
+        <div>
+            <h1>Sales Order Assistant</h1>
+            <p>Ask me to look up any sales order</p>
+        </div>
+        <button class="settings-toggle-btn" onclick="toggleSettings()" title="Settings">⚙️</button>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+        </div>
+
+    <div class="quick-chips" id="quickChips">
+        <span class="chip" onclick="sendQuick('Get order 67965')">Get order 67965</span>
+        <span class="chip" onclick="sendQuick('Customer orders for Vision Operations')">Customer orders</span>
+        <span class="chip" onclick="sendQuick('Create order')">Create order</span>
+        <span class="chip" onclick="sendQuick('Send email')">Send email</span>
+        <span class="chip" onclick="sendQuick('Help')">Help</span>
+    </div>
+
+    <div class="voice-status" id="voiceStatus"></div>
+
+    <div class="input-bar">
+        <button class="mic-btn" id="micBtn" onclick="voiceInput()" title="Voice input">🎙️</button>
+        <input type="text" id="chatInput" placeholder="Try: 'Get order 67965' or type or speak" autocomplete="off">
+        <button id="sendBtn" onclick="sendMessage()">
+            Send
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+        </button>
+    </div>
+    </div><div class="settings-sidebar collapsed" id="settingsSidebar">
+        <div class="settings-header">⚙️ Settings</div>
+
+        <div class="settings-section">
+            <h4>📧 Auto Email</h4>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Automatically send an email after every operation (Get Order, Create Order, Customer Orders).</p>
+            <div class="setting-row">
+                <label>Enable auto-send</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoEmailToggle" onchange="onAutoEmailChange()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div id="autoEmailConfig" style="display:none;">
+                <input type="email" class="setting-input" id="autoEmailTo" placeholder="recipient@company.com" onchange="onAutoEmailChange()">
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h4>🔊 Voice Settings</h4>
+            <div class="setting-row">
+                <label>Speak responses</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="ttsToggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <label>Voice speed</label>
+                <select class="setting-select" id="ttsRate" style="width:auto;margin-bottom:0;">
+                    <option value="0.8">Slow</option>
+                    <option value="1" selected>Normal</option>
+                    <option value="1.3">Fast</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h4>⏰ Email Scheduler</h4>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Send recurring order reports on a schedule.</p>
+            <div id="schedulerStatus">
+                <span class="status-badge inactive">Inactive</span>
+            </div>
+            <div style="margin-top:10px;">
+                <input type="email" class="setting-input" id="schedEmail" placeholder="recipient@company.com">
+                <input type="text" class="setting-input" id="schedCustomer" placeholder="Customer name (blank = last operation)">
+                <select class="setting-select" id="schedInterval">
+                    <option value="30 min">Every 30 minutes</option>
+                    <option value="1 hour" selected>Every 1 hour</option>
+                    <option value="2 hours">Every 2 hours</option>
+                    <option value="4 hours">Every 4 hours</option>
+                    <option value="daily">Daily (24 hours)</option>
+                </select>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                    <button class="btn-sm primary" id="schedStartBtn" onclick="startScheduler()">Start Scheduler</button>
+                    <button class="btn-sm danger" id="schedStopBtn" onclick="stopScheduler()" disabled>Stop</button>
+                </div>
+                <div class="scheduler-info" id="schedulerInfo"></div>
+            </div>
+        </div>
+    </div></div>
+
+<script>
+(function() {
+    var chatMessages = document.getElementById("chatMessages");
+    var chatInput    = document.getElementById("chatInput");
+    var sendBtn      = document.getElementById("sendBtn");
+    var quickChips   = document.getElementById("quickChips");
+    var processing   = false;
+
+    // ── Welcome ──────────────────────────────────
+    addBot("Welcome! I'm the **Sales Order Assistant**.\n\nYou can:\n• Look up an order by number: **Get order 67965**\n• Look up customer orders: **Customer orders for Vision Operations**\n• Create a new order: **Create order**\n• Email results: **Send email to user@domain.com**\n• \ud83c\udf99\ufe0f Click the mic button or say your command!");
+
+    // ── Enter key ────────────────────────────────
+    chatInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
+    // ── Send message ─────────────────────────────
+    window.sendMessage = function() {
+        var text = chatInput.value.trim();
+        if (!text || processing) return;
+        addUser(text);
+        chatInput.value = "";
+        quickChips.style.display = "none";
+        askServer(text);
+    };
+
+    window.sendQuick = function(text) {
+        chatInput.value = text;
+        sendMessage();
+    };
+
+    function askServer(text) {
+        processing = true;
+        sendBtn.disabled = true;
+        var typingEl = showTyping();
+
+        fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            removeTyping(typingEl);
+            var spokenText = '';
+            if (data.type === "order") {
+                addOrderCard(data.reply);
+                if (data.ai_summary) addAiSummaryCard(data.ai_summary);
+                spokenText = data.ai_summary || ('Order ' + data.reply.order_number + ', status ' + (data.reply.status || 'unknown') + ', customer ' + (data.reply.customer_name || '') + '.');
+            } else if (data.type === "customer_orders") {
+                addCustomerOrdersCard(data.reply);
+                if (data.ai_summary) addAiSummaryCard(data.ai_summary);
+                var cnt = data.reply.orders ? data.reply.orders.length : 0;
+                spokenText = data.ai_summary || ('Found ' + cnt + ' orders for customer ' + (data.reply.customer_name || '') + '.');
+            } else if (data.type === "create_form") {
+                addCreateOrderForm();
+                spokenText = 'Please fill out the order creation form.';
+            } else if (data.type === "create_result") {
+                addCreateResultCard(data.reply);
+                if (data.ai_summary) addAiSummaryCard(data.ai_summary);
+                spokenText = data.ai_summary || (data.reply.success ? 'Order created successfully. Order number ' + (data.reply.order_number || '') : 'Order creation failed.');
+            } else if (data.type === "email_form") {
+                addEmailForm(data.reply);
+                spokenText = 'Email form ready. Fill in the details and send.';
+            } else if (data.type === "email_success") {
+                addBotSuccess(data.reply);
+                spokenText = data.reply;
+            } else if (data.type === "error") {
+                addBotError(data.reply);
+                spokenText = data.reply;
+            } else {
+                addBot(data.reply);
+                spokenText = data.reply;
+            }
+            if (spokenText) speakText(spokenText);
+        })
+        .catch(function(err) {
+            removeTyping(typingEl);
+            addBotError("Network error: " + err.message);
+        })
+        .finally(function() {
+            processing = false;
+            sendBtn.disabled = false;
+        });
+    }
+
+    // ── DOM helpers ──────────────────────────────
+    function addUser(text) {
+        var msg = el("div", "message user");
+        msg.innerHTML = '<div class="avatar">You</div><div class="bubble">' + esc(text) + '</div>';
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function addBot(md) {
+        var msg = el("div", "message bot");
+        msg.innerHTML = '<div class="avatar">🤖</div><div class="bubble">' + renderMd(md) + '</div>';
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function addBotError(text) {
+        var msg = el("div", "message bot");
+        msg.innerHTML = '<div class="avatar">⚠️</div><div class="bubble error">' + esc(text) + '</div>';
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function addBotSuccess(text) {
+        var msg = el("div", "message bot");
+        msg.innerHTML = '<div class="avatar">🤖</div><div class="bubble success">' + esc(text) + '</div>';
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function addAiSummaryCard(summaryText) {
+        if (!summaryText) return;
+        var msg = el("div", "message bot");
+        var card = '<div class="ai-summary-card">';
+        card += '<div class="ai-header">✨ AI Summary</div>';
+        card += '<div class="ai-body">' + esc(summaryText) + '</div>';
+        card += '<div class="ai-actions">';
+        card += '<button class="btn-pdf" onclick="downloadPdf(this)">📄 Download Full Data PDF</button>';
+        card += '</div>';
+        card += '</div>';
+        msg.innerHTML = '<div class="avatar">🤖</div>' + card;
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    window.downloadPdf = function(btn) {
+        // Save original button text and set to loading state
+        var originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ Generating PDF... Please Wait';
+        
+        fetch('/api/download-pdf')
+        .then(function(r) {
+            if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || 'PDF generation failed'); });
+            return r.blob();
+        })
+        .then(function(blob) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'SalesOrder_Report.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            btn.disabled = false;
+            btn.textContent = '📄 Download Full Data PDF';
+            addBotSuccess('PDF downloaded successfully! Contains all response data in tabular format.');
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.textContent = '📄 Download Full Data PDF';
+            addBotError('PDF download failed: ' + err.message);
+        });
+    };
+
+    function addOrderCard(order) {
+        var msg = el("div", "message bot");
+        var avatar = '<div class="avatar">🤖</div>';
+        var card = '<div class="order-card">';
+        card += '<h3>📋 Order #' + esc(String(order.order_number)) + '</h3>';
+
+        // ── Header Details (key-value table) ──
+        var hdr = order.header_details || {};
+        var hasHdr = hdr && Object.keys(hdr).length > 0;
+        if (hasHdr) {
+            card += '<h4 style="font-size:0.88rem;color:var(--accent);margin:10px 0 6px;">🧾 Header Details</h4>';
+            card += '<table class="order-table" style="margin-bottom:14px;"><tbody>';
+            var hdKeys = Object.keys(hdr);
+            for (var hi = 0; hi < hdKeys.length; hi++) {
+                var hval = hdr[hdKeys[hi]];
+                if (hval && String(hval) !== '' && String(hval) !== 'None') {
+                    card += '<tr><td style="font-weight:600;width:40%;background:#f0f4f8;">' + esc(hdKeys[hi]) + '</td>';
+                    card += '<td>' + esc(String(hval)) + '</td></tr>';
+                }
+            }
+            card += '</tbody></table>';
+        } else {
+            // Fallback: show basic meta
+            card += '<div class="order-meta">';
+            card += metaRow("Status", order.status);
+            card += metaRow("Date", order.ordered_date);
+            card += metaRow("Customer", order.customer_name);
+            card += metaRow("Currency", order.currency);
+            card += '</div>';
+        }
+
+        // ── Line Details ──
+        if (order.lines && order.lines.length > 0) {
+            card += '<h4 style="font-size:0.88rem;color:var(--accent);margin:10px 0 6px;">📦 Line Details (' + order.lines.length + ' line' + (order.lines.length !== 1 ? 's' : '') + ')</h4>';
+            var lineCols = ["Line", "Item", "Qty", "UOM", "Unit Price", "List Price", "Status"];
+            card += '<div style="overflow-x:auto;"><table class="order-table"><thead><tr>';
+            for (var ci = 0; ci < lineCols.length; ci++) {
+                card += '<th>' + esc(lineCols[ci]) + '</th>';
+            }
+            card += '</tr></thead><tbody>';
+            for (var i = 0; i < order.lines.length; i++) {
+                var ln = order.lines[i];
+                card += '<tr>';
+                for (var cj = 0; cj < lineCols.length; cj++) {
+                    card += '<td>' + esc(String(ln[lineCols[cj]] || '')) + '</td>';
+                }
+                card += '</tr>';
+            }
+            card += '</tbody></table></div>';
+        } else {
+            card += '<p style="color:#6b7280;font-size:0.85rem;">No line items found.</p>';
+        }
+
+        if (order.messages) {
+            card += '<p style="margin-top:10px;font-size:0.82rem;color:#6b7280;">' + esc(String(order.messages)) + '</p>';
+        }
+        card += '</div>';
+
+        msg.innerHTML = avatar + card;
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function addCustomerOrdersCard(data) {
+        var msg = el("div", "message bot");
+        var avatar = '<div class="avatar">🤖</div>';
+        var card = '<div class="order-card">';
+        card += '<h3>👤 Customer Orders — ' + esc(String(data.customer_name || '')) + '</h3>';
+
+        if (data.error) {
+            card += '<p style="color:#991b1b;">' + esc(data.error) + '</p>';
+        } else if (data.rows && data.rows.length > 0) {
+            card += '<p style="margin-bottom:10px;font-size:0.85rem;color:#6b7280;">' + data.count + ' record(s) found</p>';
+            // Build table from whatever keys the API returns
+            var keys = data.raw_keys && data.raw_keys.length > 0 ? data.raw_keys : Object.keys(data.rows[0]);
+            card += '<div style="overflow-x:auto;"><table class="order-table"><thead><tr>';
+            for (var k = 0; k < keys.length; k++) {
+                card += '<th>' + esc(keys[k]) + '</th>';
+            }
+            card += '</tr></thead><tbody>';
+            for (var i = 0; i < data.rows.length; i++) {
+                card += '<tr>';
+                for (var j = 0; j < keys.length; j++) {
+                    card += '<td>' + esc(String(data.rows[i][keys[j]] || '')) + '</td>';
+                }
+                card += '</tr>';
+            }
+            card += '</tbody></table></div>';
+        } else {
+            card += '<p style="color:#6b7280;font-size:0.85rem;">No orders found for this customer.</p>';
+        }
+        card += '</div>';
+
+        msg.innerHTML = avatar + card;
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function addCreateOrderForm() {
+        var msg = el("div", "message bot");
+        var avatar = '<div class="avatar">🤖</div>';
+        var today = new Date().toISOString().split('T')[0];
+        var form = '<div class="create-form">';
+        form += '<h3>➕ Create New Sales Order</h3>';
+        form += '<div class="form-grid">';
+        form += formField('cust_po_number', 'Customer PO #', 'text', 'PO038');
+        form += formField('ordered_item', 'Ordered Item', 'text', 'XP9005');
+        form += formField('ordered_quantity', 'Quantity', 'number', '2');
+        form += formField('schedule_ship_date', 'Ship Date', 'date', today);
+        form += formField('unit_list_price', 'List Price ($)', 'number', '1499.99');
+        form += formField('unit_selling_price', 'Selling Price ($)', 'number', '1499.99');
+        form += formField('inventory_item_id', 'Inventory Item ID', 'number', '12027');
+        form += formField('line_type_id', 'Line Type ID', 'number', '1427');
+        form += formField('order_type_id', 'Order Type ID', 'number', '1430');
+        form += formField('payment_term_id', 'Payment Term ID', 'number', '4');
+        form += formField('price_list_id', 'Price List ID', 'number', '1000');
+        form += formField('salesrep_id', 'Sales Rep ID', 'number', '10067');
+        form += formField('sold_to_org_id', 'Sold To Org ID', 'number', '5391');
+        form += formField('ship_to_org_id', 'Ship To Org ID', 'number', '6472');
+        form += formField('currency', 'Currency', 'text', 'USD');
+        form += formField('attribute6', 'Attribute6', 'text', '000004783');
+        form += '</div>';
+        form += '<div class="form-actions">';
+        form += '<button class="btn-submit" onclick="submitCreateOrder(this)">Submit Order</button>';
+        form += '<button class="btn-cancel" onclick="cancelCreateOrder(this)">Cancel</button>';
+        form += '</div>';
+        form += '</div>';
+
+        msg.innerHTML = avatar + form;
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function formField(name, label, type, defVal) {
+        var step = (type === 'number' && (name.indexOf('price') >= 0)) ? ' step="0.01"' : '';
+        return '<div class="form-group">' +
+            '<label>' + esc(label) + '</label>' +
+            '<input type="' + type + '" name="' + name + '" value="' + esc(defVal) + '"' + step + '>' +
+            '</div>';
+    }
+
+    window.submitCreateOrder = function(btn) {
+        var formEl = btn.closest('.create-form');
+        var inputs = formEl.querySelectorAll('input');
+        var data = {};
+        for (var i = 0; i < inputs.length; i++) {
+            data[inputs[i].name] = inputs[i].value;
+        }
+
+        // Disable form
+        btn.disabled = true;
+        btn.textContent = 'Submitting...';
+        var allInputs = formEl.querySelectorAll('input, button');
+        for (var j = 0; j < allInputs.length; j++) allInputs[j].disabled = true;
+
+        var typingEl = showTyping();
+
+        fetch('/api/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            removeTyping(typingEl);
+            if (resp.type === 'create_result') {
+                addCreateResultCard(resp.reply);
+                if (resp.ai_summary) addAiSummaryCard(resp.ai_summary);
+            } else if (resp.type === 'error') {
+                addBotError(resp.reply);
+            } else {
+                addBot(resp.reply);
+            }
+        })
+        .catch(function(err) {
+            removeTyping(typingEl);
+            addBotError('Network error: ' + err.message);
+        });
+    };
+
+    window.cancelCreateOrder = function(btn) {
+        var formMsg = btn.closest('.message');
+        if (formMsg) formMsg.remove();
+        addBot('Order creation cancelled.');
+    };
+
+    function addEmailForm(data) {
+        var msg = el('div', 'message bot');
+        var avatar = '<div class="avatar">🤖</div>';
+        var form = '<div class="create-form">';
+        form += '<h3>📧 Send Email</h3>';
+        if (!data.has_data) {
+            form += '<p style="color:#991b1b;font-size:0.85rem;margin-bottom:12px;">⚠️ No recent operation data found. Please look up an order or customer first.</p>';
+        } else {
+            form += '<p style="font-size:0.85rem;color:#6b7280;margin-bottom:12px;">A <strong>PDF with all response data</strong> (complete tabular format, all rows) will be attached to the email.</p>';
+        }
+        form += '<div class="form-grid">';
+        form += '<div class="form-group full"><label>To</label>';
+        form += '<input type="email" name="to_email" value="' + esc(data.to_email || '') + '" placeholder="recipient@company.com"></div>';
+        form += '<div class="form-group full"><label>Subject</label>';
+        form += '<input type="text" name="subject" value="Oracle ERP Order Details Update"></div>';
+        form += '<div class="form-group full"><label>Message</label>';
+        form += '<input type="text" name="body" value="Please find the requested order details structured below."></div>';
+        form += '</div>';
+        form += '<button class="email-preview-toggle" onclick="toggleEmailPreview(this)">▶ Preview Data to be Sent</button>';
+        form += '<div class="email-preview" style="display:none;">Loading preview...</div>';
+        form += '<div class="form-actions">';
+        form += '<button class="btn-submit" onclick="submitEmail(this)"' + (data.has_data ? '' : ' disabled') + '>✉️ Send Email</button>';
+        form += '<button class="btn-cancel" onclick="cancelEmail(this)">Cancel</button>';
+        form += '</div>';
+        form += '</div>';
+
+        msg.innerHTML = avatar + form;
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    window.toggleEmailPreview = function(btn) {
+        var previewDiv = btn.nextElementSibling;
+        if (previewDiv.style.display === 'none') {
+            btn.textContent = '▼ Hide Preview';
+            previewDiv.style.display = 'block';
+            fetch('/api/email-preview')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.html) {
+                        previewDiv.innerHTML = data.html;
+                    } else {
+                        previewDiv.innerHTML = '<p style="color:#6b7280;">No data available to preview.</p>';
+                    }
+                })
+                .catch(function() {
+                    previewDiv.innerHTML = '<p style="color:#991b1b;">Failed to load preview.</p>';
+                });
+        } else {
+            btn.textContent = '▶ Preview Data to be Sent';
+            previewDiv.style.display = 'none';
+        }
+    };
+
+    window.submitEmail = function(btn) {
+        var formEl = btn.closest('.create-form');
+        var inputs = formEl.querySelectorAll('input');
+        var data = {};
+        for (var i = 0; i < inputs.length; i++) {
+            data[inputs[i].name] = inputs[i].value;
+        }
+        if (!data.to_email || !data.to_email.trim()) {
+            addBotError('Please enter an email address.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        var allInputs = formEl.querySelectorAll('input, button');
+        for (var j = 0; j < allInputs.length; j++) allInputs[j].disabled = true;
+
+        var typingEl = showTyping();
+
+        fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            removeTyping(typingEl);
+            if (resp.type === 'email_success') {
+                addBotSuccess(resp.reply);
+            } else {
+                addBotError(resp.reply);
+            }
+        })
+        .catch(function(err) {
+            removeTyping(typingEl);
+            addBotError('Network error: ' + err.message);
+        });
+    };
+
+    window.cancelEmail = function(btn) {
+        var formMsg = btn.closest('.message');
+        if (formMsg) formMsg.remove();
+        addBot('Email cancelled.');
+    };
+
+    function addCreateResultCard(result) {
+        var msg = el('div', 'message bot');
+        var avatar = '<div class="avatar">🤖</div>';
+        var card = '<div class="order-card">';
+
+        if (result.error) {
+            card += '<h3>❌ Order Creation Failed</h3>';
+            card += '<p style="color:#991b1b;">' + esc(result.error) + '</p>';
+        } else if (result.success) {
+            card += '<h3>✅ Order Created Successfully!</h3>';
+            card += '<div class="order-meta">';
+            card += metaRow('Order Number', result.order_number);
+            card += metaRow('Status', result.flow_status);
+            card += metaRow('Customer PO', result.cust_po_number);
+            card += metaRow('Return Status', result.return_status);
+            card += '</div>';
+        } else {
+            card += '<h3>⚠️ Order Submission Returned Errors</h3>';
+            card += '<div class="order-meta">';
+            card += metaRow('Return Status', result.return_status);
+            card += metaRow('Message Count', result.msg_count);
+            card += '</div>';
+            if (result.msg_data) {
+                card += '<p style="margin-top:10px;font-size:0.85rem;color:#991b1b;">' + esc(String(result.msg_data)) + '</p>';
+            }
+        }
+        card += '</div>';
+
+        msg.innerHTML = avatar + card;
+        chatMessages.appendChild(msg);
+        scroll();
+    }
+
+    function metaRow(label, val) {
+        return '<span class="label">' + esc(label) + ':</span><span class="value">' + esc(String(val || "—")) + '</span>';
+    }
+
+    function showTyping() {
+        var msg = el("div", "message bot");
+        msg.innerHTML = '<div class="avatar">🤖</div><div class="typing-indicator"><span></span><span></span><span></span></div>';
+        chatMessages.appendChild(msg);
+        scroll();
+        return msg;
+    }
+
+    function removeTyping(node) {
+        if (node && node.parentNode) node.parentNode.removeChild(node);
+    }
+
+    function el(tag, cls) { var d = document.createElement(tag); d.className = cls; return d; }
+    function scroll() { chatMessages.scrollTop = chatMessages.scrollHeight; }
+
+    function esc(s) {
+        var d = document.createElement("div");
+        d.appendChild(document.createTextNode(s));
+        return d.innerHTML;
+    }
+
+    function renderMd(text) {
+        // Minimal markdown: **bold** and newlines
+        return esc(text)
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
+    }
+
+    // ── Voice Input (Browser Web Speech API) ─────
+    var _recognition = null;
+    var _isRecording = false;
+
+    window.voiceInput = function() {
+        var micBtn = document.getElementById('micBtn');
+        var voiceStatus = document.getElementById('voiceStatus');
+
+        // If already recording, stop
+        if (_isRecording && _recognition) {
+            _recognition.stop();
+            return;
+        }
+
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            // Fallback: server-side voice
+            serverVoiceInput();
+            return;
+        }
+
+        _recognition = new SpeechRecognition();
+        _recognition.lang = 'en-US';
+        _recognition.continuous = false;
+        _recognition.interimResults = true;
+        _recognition.maxAlternatives = 1;
+
+        _isRecording = true;
+        micBtn.classList.add('recording');
+        micBtn.textContent = '🔴';
+        voiceStatus.textContent = '🎙️ Listening… speak now';
+
+        _recognition.onresult = function(event) {
+            var transcript = '';
+            var isFinal = false;
+            for (var i = 0; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+                if (event.results[i].isFinal) isFinal = true;
+            }
+            chatInput.value = transcript;
+            if (isFinal) {
+                voiceStatus.textContent = '✅ Recognized: "' + transcript.trim() + '"';
+            } else {
+                voiceStatus.textContent = '🎙️ Hearing: "' + transcript + '"…';
+            }
+        };
+
+        _recognition.onend = function() {
+            _isRecording = false;
+            micBtn.classList.remove('recording');
+            micBtn.textContent = '🎙️';
+            var text = chatInput.value.trim();
+            if (text) {
+                // Auto-send the recognized text
+                setTimeout(function() {
+                    sendMessage();
+                    voiceStatus.textContent = '';
+                }, 400);
+            } else {
+                voiceStatus.textContent = '🎙️ Nothing heard — try again or type your message.';
+                setTimeout(function() { voiceStatus.textContent = ''; }, 4000);
+            }
+        };
+
+        _recognition.onerror = function(event) {
+            _isRecording = false;
+            micBtn.classList.remove('recording');
+            micBtn.textContent = '🎙️';
+            if (event.error === 'no-speech') {
+                voiceStatus.textContent = '🎙️ No speech detected — try speaking louder.';
+            } else if (event.error === 'not-allowed') {
+                voiceStatus.textContent = '⚠️ Microphone access denied. Allow in browser settings.';
+            } else {
+                voiceStatus.textContent = '⚠️ Voice error: ' + event.error;
+            }
+            setTimeout(function() { voiceStatus.textContent = ''; }, 5000);
+        };
+
+        _recognition.start();
+    };
+
+    function serverVoiceInput() {
+        var micBtn = document.getElementById('micBtn');
+        var voiceStatus = document.getElementById('voiceStatus');
+        micBtn.classList.add('recording');
+        micBtn.textContent = '🔴';
+        voiceStatus.textContent = '🎙️ Listening on server… speak now (5 seconds)';
+
+        fetch('/api/voice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            micBtn.classList.remove('recording');
+            micBtn.textContent = '🎙️';
+            if (data.text) {
+                chatInput.value = data.text;
+                voiceStatus.textContent = '✅ Recognized: "' + data.text + '"';
+                setTimeout(function() {
+                    sendMessage();
+                    voiceStatus.textContent = '';
+                }, 400);
+            } else {
+                voiceStatus.textContent = data.error || '🎙️ Nothing heard — try again.';
+                setTimeout(function() { voiceStatus.textContent = ''; }, 4000);
+            }
+        })
+        .catch(function(err) {
+            micBtn.classList.remove('recording');
+            micBtn.textContent = '🎙️';
+            voiceStatus.textContent = '⚠️ Voice service unavailable: ' + err.message;
+            setTimeout(function() { voiceStatus.textContent = ''; }, 5000);
+        });
+    }
+
+    // ── Text-to-Speech (Browser) ─────────────────
+    function speakText(text) {
+        var ttsEnabled = document.getElementById('ttsToggle');
+        if (!ttsEnabled || !ttsEnabled.checked) return;
+        if (!window.speechSynthesis) return;
+
+        // Stop any ongoing speech
+        window.speechSynthesis.cancel();
+
+        // Clean text for speech: remove markdown, HTML tags, emojis
+        var clean = text
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/<[^>]+>/g, '')
+            .replace(/[📋📦⚠️✅🤖📧🎙️🔊⏰⚙️🔴]/g, '')
+            .replace(/•/g, ', ')
+            .replace(/\n+/g, '. ')
+            .trim();
+
+        if (!clean) return;
+
+        // Truncate very long text for TTS
+        if (clean.length > 500) {
+            clean = clean.substring(0, 500) + '... and more details are shown in the chat.';
+        }
+
+        var utterance = new SpeechSynthesisUtterance(clean);
+        utterance.lang = 'en-US';
+        var rateSelect = document.getElementById('ttsRate');
+        utterance.rate = rateSelect ? parseFloat(rateSelect.value) : 1;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // ── Settings Sidebar ─────────────────────────
+    window.toggleSettings = function() {
+        var sb = document.getElementById('settingsSidebar');
+        sb.classList.toggle('collapsed');
+        if (!sb.classList.contains('collapsed')) {
+            loadAutoEmailState();
+            loadSchedulerState();
+        }
+    };
+
+    // ── Auto-Email ───────────────────────────────
+    function loadAutoEmailState() {
+        fetch('/api/auto-email').then(function(r) { return r.json(); }).then(function(d) {
+            document.getElementById('autoEmailToggle').checked = d.enabled;
+            document.getElementById('autoEmailTo').value = d.to || '';
+            document.getElementById('autoEmailConfig').style.display = d.enabled ? 'block' : 'none';
+        });
+    }
+
+    window.onAutoEmailChange = function() {
+        var enabled = document.getElementById('autoEmailToggle').checked;
+        var to = document.getElementById('autoEmailTo').value.trim();
+        document.getElementById('autoEmailConfig').style.display = enabled ? 'block' : 'none';
+        fetch('/api/auto-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: enabled, to: to })
+        });
+    };
+
+    // ── Scheduler ────────────────────────────────
+    var _schedPoll = null;
+
+    function loadSchedulerState() {
+        fetch('/api/scheduler/status').then(function(r) { return r.json(); }).then(function(d) {
+            renderSchedulerState(d);
+        });
+    }
+
+    function renderSchedulerState(d) {
+        var statusEl = document.getElementById('schedulerStatus');
+        var infoEl = document.getElementById('schedulerInfo');
+        var startBtn = document.getElementById('schedStartBtn');
+        var stopBtn = document.getElementById('schedStopBtn');
+
+        if (d.active) {
+            statusEl.innerHTML = '<span class="status-badge active">Active</span>';
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            var info = 'Every ' + d.interval_mins + ' min(s)';
+            if (d.customer_name) info += ' | Customer: ' + d.customer_name;
+            info += ' | To: ' + d.to_email;
+            if (d.last_run) info += '<br>Last run: ' + d.last_run + ' — ' + (d.last_status || '');
+            if (d.runs > 0) info += '<br>Emails sent: ' + d.runs;
+            infoEl.innerHTML = info;
+            if (!_schedPoll) {
+                _schedPoll = setInterval(loadSchedulerState, 30000);
+            }
+        } else {
+            statusEl.innerHTML = '<span class="status-badge inactive">Inactive</span>';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            if (d.last_run) {
+                infoEl.innerHTML = 'Last run: ' + d.last_run + ' — ' + (d.last_status || '') + '<br>Total sent: ' + (d.runs || 0);
+            } else {
+                infoEl.innerHTML = '';
+            }
+            if (_schedPoll) { clearInterval(_schedPoll); _schedPoll = null; }
+        }
+    }
+
+    window.startScheduler = function() {
+        var email = document.getElementById('schedEmail').value.trim();
+        var customer = document.getElementById('schedCustomer').value.trim();
+        var interval = document.getElementById('schedInterval').value;
+        if (!email) { alert('Please enter a recipient email address.'); return; }
+        document.getElementById('schedStartBtn').disabled = true;
+        document.getElementById('schedStartBtn').textContent = 'Starting...';
+
+        fetch('/api/scheduler/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to_email: email, customer_name: customer, interval: interval })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            document.getElementById('schedStartBtn').textContent = 'Start Scheduler';
+            if (d.ok) {
+                renderSchedulerState(d);
+                addBotSuccess('Scheduler started: ' + d.message);
+            } else {
+                addBotError(d.error || 'Failed to start scheduler.');
+                document.getElementById('schedStartBtn').disabled = false;
+            }
+        });
+    };
+
+    window.stopScheduler = function() {
+        document.getElementById('schedStopBtn').disabled = true;
+        fetch('/api/scheduler/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            renderSchedulerState(d);
+            addBot('Scheduler stopped.');
+        });
+    };
+})();
+</script>
+
+</body>
+</html>

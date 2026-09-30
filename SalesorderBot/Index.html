@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Order Assistant</title>
+    <style>
+        /* CSS Reset & Variables */
+        :root {
+            --primary: #105b38; /* Centroid Green */
+            --bg-color: #ffffff;
+            --chat-bg: #f4f4f4;
+            --text-main: #0d0d0d;
+            --border: #e5e5e5;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 300px;
+            background-color: #f9f9f9;
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .branding {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .branding h2 { margin: 0; font-size: 1.2rem; }
+        .branding p { font-size: 0.85rem; color: #666; margin-top: 5px; }
+        .branding .icon { font-size: 2rem; }
+
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar-section h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+
+        .faq-btn, .action-btn {
+            width: 100%;
+            background-color: #fff;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background-color 0.2s;
+        }
+
+        .faq-btn:hover, .action-btn:hover { background-color: var(--chat-bg); }
+        .danger-btn { color: #d9534f; border-color: #ffcccc; text-align: center; }
+        .danger-btn:hover { background-color: #ffe6e6; }
+
+        /* Main Chat Window */
+        .main-chat {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .chat-history {
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Chat Bubbles */
+        .msg-row { display: flex; width: 100%; }
+        .msg-row.user { justify-content: flex-end; }
+        .msg-row.bot { justify-content: flex-start; }
+
+        .bubble {
+            max-width: 70%;
+            padding: 12px 18px;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        .user .bubble {
+            background-color: var(--chat-bg);
+            border-radius: 20px 20px 4px 20px;
+        }
+
+        .bot .bubble {
+            background-color: transparent;
+            border-radius: 0;
+            padding: 0 10px;
+        }
+
+        /* Input Area */
+        .input-container {
+            padding: 20px 30px;
+            background-color: var(--bg-color);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-box {
+            flex-grow: 1;
+            padding: 14px 20px;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            font-size: 1rem;
+            background-color: #f9f9f9;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .input-box:focus {
+            background-color: #fff;
+            border-color: #b3b3b3;
+        }
+
+        .icon-btn {
+            background-color: #fff;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover { background-color: var(--chat-bg); }
+        .icon-btn.recording { background-color: #ffcccc; border-color: #d9534f; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="branding">
+            <div class="icon">📦</div>
+            <h2>Sales Order Assistant</h2>
+            <p>🚀 Presented by CENTROID</p>
+        </div>
+
+        <button class="action-btn" onclick="sendSystemMessage('cancel')">🏠 Back to Chat / Cancel</button>
+        <button class="action-btn danger-btn" onclick="resetChat()">🔄 Clear Chat & Start Over</button>
+
+        <div class="sidebar-section" style="margin-top: 20px;">
+            <h3>❓ FAQ</h3>
+            <button class="faq-btn" onclick="sendSystemMessage('How do I create a new sales order?')">🗣️ Create a new order?</button>
+            <button class="faq-btn" onclick="sendSystemMessage('How do I look up an existing order?')">🗣️ Look up existing order?</button>
+            <button class="faq-btn" onclick="sendSystemMessage('How do I send order details via email?')">🗣️ Send details via email?</button>
+            <button class="faq-btn" onclick="sendSystemMessage('Can I search for orders by date?')">🗣️ Search by date/status?</button>
+        </div>
+    </div>
+
+    <div class="main-chat">
+        <div class="chat-history" id="chat-history">
+            </div>
+
+        <div class="input-container">
+            <button class="icon-btn" id="mic-btn" onclick="toggleVoice()" title="Use Voice Command">🎙️</button>
+            <input type="text" class="input-box" id="chat-input" placeholder="Try: 'Create order for CM94532'" onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button class="icon-btn" onclick="sendMessage()" title="Send Message">➤</button>
+        </div>
+    </div>
+
+    <script>
+        const chatHistory = document.getElementById('chat-history');
+        const chatInput = document.getElementById('chat-input');
+        const micBtn = document.getElementById('mic-btn');
+
+        // Web Speech API for Voice Recognition (Browser Native)
+        let recognition;
+        let isRecording = false;
+
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                chatInput.value = transcript;
+                toggleVoice(); // Turn off mic UI
+                sendMessage(); // Auto send after speaking
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Speech recognition error", event.error);
+                toggleVoice();
+            };
+        } else {
+            micBtn.style.display = 'none'; // Hide if browser doesn't support voice
+        }
+
+        // Initialize Chat
+        window.onload = () => {
+            appendMessage("bot", "👋 Welcome to the Centroid Sales Order Assistant! How can I help you today?");
+        };
+
+        function toggleVoice() {
+            if (!recognition) return alert("Voice recognition not supported in this browser.");
+            
+            if (isRecording) {
+                recognition.stop();
+                micBtn.classList.remove("recording");
+                isRecording = false;
+            } else {
+                recognition.start();
+                micBtn.classList.add("recording");
+                isRecording = true;
+                chatInput.placeholder = "Listening...";
+            }
+        }
+
+        function appendMessage(role, text) {
+            const row = document.createElement("div");
+            row.className = `msg-row ${role}`;
+            
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+            bubble.innerHTML = text.replace(/\n/g, "<br>"); // basic formatting
+            
+            row.appendChild(bubble);
+            chatHistory.appendChild(row);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const msg = chatInput.value.trim();
+            if (!msg) return;
+
+            // 1. Display user message
+            appendMessage("user", msg);
+            chatInput.value = "";
+            chatInput.placeholder = "Try: 'Create order for CM94532'";
+
+            // 2. Fetch from backend
+            try {
+                const res = await fetch("http://127.0.0.1:8000/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: msg })
+                });
+                
+                const data = await res.json();
+                appendMessage("bot", data.response);
+
+                // Optional: Basic Text-to-Speech via Browser
+                const utterance = new SpeechSynthesisUtterance(data.response.replace(/<[^>]*>?/gm, '')); 
+                window.speechSynthesis.speak(utterance);
+
+            } catch (error) {
+                appendMessage("bot", "❌ <i>Error connecting to server. Ensure main.py is running.</i>");
+            }
+        }
+
+        function sendSystemMessage(text) {
+            chatInput.value = text;
+            sendMessage();
+        }
+
+        async function resetChat() {
+            chatHistory.innerHTML = "";
+            try {
+                const res = await fetch("http://127.0.0.1:8000/api/reset", { method: "POST" });
+                const data = await res.json();
+                appendMessage("bot", data.response);
+            } catch {
+                appendMessage("bot", "Chat cleared.");
+            }
+        }
+    </script>
+</body>
+</html>

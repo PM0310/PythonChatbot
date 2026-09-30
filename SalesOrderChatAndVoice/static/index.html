@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Order Assistant</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>📦 Sales Order Assistant</h2>
+                <p class="subtitle">Presented by CENTROID</p>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>📋 Fields Collected</h3>
+                <div id="fields-collected" class="fields-list">
+                    <p class="empty-state">No fields collected yet.</p>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>📧 Auto Email Settings</h3>
+                <div class="toggle-row">
+                    <label class="toggle">
+                        <input type="checkbox" id="auto-email-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span>Auto-send after Order Details</span>
+                </div>
+                <div id="auto-email-config" class="hidden">
+                    <input type="email" id="auto-email-to" class="input-field" placeholder="recipient@company.com">
+                    <div id="auto-email-status"></div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>❓ FAQ</h3>
+                <div id="faq-list" class="faq-list"></div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="btn btn-danger" id="btn-clear" onclick="clearChat()">🔄 Clear Chat & Start Over</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top bar for mobile -->
+            <div class="topbar">
+                <button class="btn-icon" id="btn-sidebar-toggle" onclick="toggleSidebar()">☰</button>
+                <h1>📦 Sales Order Assistant</h1>
+            </div>
+
+            <!-- Chat Container -->
+            <div class="chat-container" id="chat-container">
+                <div id="chat-messages" class="chat-messages">
+                    <!-- Messages rendered here -->
+                </div>
+
+                <!-- Dynamic Stage Panel (selection lists, forms, etc.) -->
+                <div id="stage-panel" class="stage-panel hidden"></div>
+            </div>
+
+            <!-- Input Bar -->
+            <div class="input-bar">
+                <button class="btn-icon mic-btn" id="btn-mic" onclick="voiceInput()" title="Voice input">🎙️</button>
+                <input type="text" id="chat-input" class="chat-input" 
+                       placeholder="Try: 'Create order for CM94532' or 'Send email to myname@domain.com'"
+                       autocomplete="off">
+                <button class="btn btn-primary send-btn" id="btn-send" onclick="sendMessage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sales Order Assistant — Glass UI</title>
+<style>
+  :root{
+    --glass: rgba(255,255,255,.10);
+    --glass-strong: rgba(255,255,255,.18);
+    --stroke: rgba(255,255,255,.22);
+    --text: #f2f5ff;
+    --muted: rgba(233,238,255,.62);
+    --accent: #7aa2ff;
+    --accent2: #b98cff;
+    --ok: #57e3a5;
+    --warn: #ffd166;
+    --err: #ff7b8a;
+    --radius: 20px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#0a0d1c; overflow:hidden;
+  }
+  /* animated aurora backdrop */
+  .bg{position:fixed; inset:0; z-index:0; overflow:hidden; background:
+      radial-gradient(1200px 700px at 10% 0%, #1b2350 0%, transparent 60%),
+      radial-gradient(900px 600px at 100% 20%, #2a1345 0%, transparent 55%),
+      linear-gradient(160deg,#080b18 0%,#0d1226 50%,#0a0f20 100%);}
+  .blob{position:absolute; border-radius:50%; filter:blur(80px); opacity:.55; animation:float 22s ease-in-out infinite}
+  .b1{width:520px;height:520px;background:#3b6ef6;top:-140px;left:-120px}
+  .b2{width:460px;height:460px;background:#a34bff;bottom:-160px;right:-80px;animation-delay:-7s}
+  .b3{width:380px;height:380px;background:#12c2e9;top:40%;left:55%;animation-delay:-13s}
+  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(60px,-40px) scale(1.08)}66%{transform:translate(-40px,50px) scale(.95)}}
+
+  .app{position:relative; z-index:1; height:100vh; display:grid; grid-template-columns:320px 1fr; gap:18px; padding:18px}
+
+  .glass{
+    background:var(--glass); border:1px solid var(--stroke); border-radius:var(--radius);
+    backdrop-filter:blur(22px) saturate(160%); -webkit-backdrop-filter:blur(22px) saturate(160%);
+    box-shadow:0 12px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.14);
+  }
+
+  /* sidebar */
+  aside{display:flex; flex-direction:column; overflow:hidden}
+  .brand{padding:18px 20px 12px; border-bottom:1px solid var(--stroke)}
+  .brand h1{margin:0; font-size:17px; letter-spacing:.3px}
+  .brand p{margin:4px 0 0; font-size:12px; color:var(--muted)}
+  .side-scroll{overflow-y:auto; padding:14px 16px 18px; flex:1}
+  .sec{margin-bottom:16px}
+  .sec h3{margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--muted)}
+  .chip{display:flex; justify-content:space-between; gap:10px; font-size:12px; padding:7px 10px; border-radius:12px;
+        background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); margin-bottom:6px}
+  .chip b{color:var(--muted); font-weight:500}
+  .chip span{font-family:ui-monospace,Consolas,monospace; color:#dfe6ff; text-align:right; word-break:break-all}
+  .empty{font-size:12px; color:var(--muted); padding:8px 10px; border-radius:12px; background:rgba(255,255,255,.05)}
+
+  button{font-family:inherit}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
+    padding:9px 14px; border-radius:14px; font-size:13px; color:var(--text);
+    background:rgba(255,255,255,.09); border:1px solid var(--stroke);
+    transition:.18s ease; backdrop-filter:blur(8px);
+  }
+  .btn:hover{background:rgba(255,255,255,.17); transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn[disabled]{opacity:.45; cursor:not-allowed; transform:none}
+  .btn.primary{background:linear-gradient(135deg,rgba(122,162,255,.85),rgba(185,140,255,.85)); border-color:rgba(255,255,255,.35); font-weight:600}
+  .btn.primary:hover{filter:brightness(1.1)}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:6px 10px; font-size:12px; border-radius:11px}
+  .btn.block{width:100%}
+  .row{display:flex; gap:8px; flex-wrap:wrap}
+
+  input,textarea,select{
+    width:100%; padding:10px 12px; border-radius:13px; font-size:13px; color:var(--text);
+    background:rgba(255,255,255,.07); border:1px solid var(--stroke); outline:none; font-family:inherit;
+  }
+  input::placeholder,textarea::placeholder{color:rgba(233,238,255,.38)}
+  input:focus,textarea:focus,select:focus{border-color:rgba(122,162,255,.75); background:rgba(255,255,255,.11)}
+  select option{background:#151a30}
+  label.sw{display:flex; align-items:center; gap:10px; font-size:13px; cursor:pointer; margin-bottom:10px}
+  .sw input{display:none}
+  .track{width:40px;height:22px;border-radius:20px;background:rgba(255,255,255,.14);border:1px solid var(--stroke);position:relative;transition:.2s;flex:none}
+  .track::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s}
+  .sw input:checked + .track{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+  .sw input:checked + .track::after{left:20px}
+
+  details{border:1px solid var(--stroke); border-radius:14px; background:rgba(255,255,255,.05); padding:8px 12px; margin-bottom:10px}
+  details summary{cursor:pointer; font-size:12.5px; list-style:none; padding:3px 0}
+  details summary::-webkit-details-marker{display:none}
+  details[open]{background:rgba(255,255,255,.08)}
+  .stack{display:grid; gap:8px; margin-top:8px}
+
+  /* main */
+  main{display:flex; flex-direction:column; overflow:hidden}
+  .topbar{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--stroke)}
+  .topbar h2{margin:0; font-size:15px; font-weight:600}
+  .status{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok); box-shadow:0 0 10px var(--ok)}
+
+  .content{flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:14px}
+  .msg{max-width:78%; padding:12px 16px; border-radius:18px; font-size:14px; line-height:1.55; white-space:pre-wrap; word-wrap:break-word;
+       animation:pop .25s ease}
+  @keyframes pop{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+  .msg.user{align-self:flex-end; background:linear-gradient(135deg,rgba(122,162,255,.30),rgba(185,140,255,.30));
+            border:1px solid rgba(255,255,255,.24); border-bottom-right-radius:6px}
+  .msg.bot{align-self:flex-start; background:rgba(255,255,255,.08); border:1px solid var(--stroke); border-bottom-left-radius:6px}
+  .msg code{background:rgba(0,0,0,.30); padding:1px 6px; border-radius:6px; font-size:12.5px}
+
+  .panel{border-radius:var(--radius); border:1px solid var(--stroke); background:rgba(255,255,255,.09);
+         backdrop-filter:blur(18px); padding:18px 20px; animation:pop .25s ease}
+  .panel h3{margin:0 0 4px; font-size:15px}
+  .panel .note{margin:0 0 14px; font-size:12.5px; color:var(--muted)}
+  .opts{display:grid; gap:8px; max-height:340px; overflow-y:auto; margin-bottom:14px}
+  .opt{display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:14px; cursor:pointer;
+       background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); transition:.15s}
+  .opt:hover{background:rgba(255,255,255,.13); border-color:rgba(122,162,255,.6); transform:translateX(3px)}
+  .opt .n{width:26px;height:26px;flex:none;border-radius:9px;display:grid;place-items:center;font-size:11px;
+          background:rgba(122,162,255,.28); border:1px solid rgba(255,255,255,.2)}
+  .opt .t{font-size:13.5px; font-weight:600}
+  .opt .s{font-size:11.5px; color:var(--muted); margin-top:2px}
+
+  .kv{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px; margin-bottom:14px}
+  .kv .cell{padding:9px 12px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1)}
+  .kv .cell b{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); font-weight:500}
+  .kv .cell span{font-size:13px; font-family:ui-monospace,Consolas,monospace}
+
+  .metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px}
+  .metric{padding:12px 14px; border-radius:14px; background:linear-gradient(135deg,rgba(122,162,255,.16),rgba(185,140,255,.12));
+          border:1px solid rgba(255,255,255,.16)}
+  .metric b{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.9px; color:var(--muted); font-weight:500}
+  .metric span{font-size:19px; font-weight:600}
+
+  .tablewrap{max-height:420px; overflow:auto; border-radius:14px; border:1px solid var(--stroke); margin-bottom:14px}
+  table{border-collapse:collapse; width:100%; font-size:12.5px}
+  th{position:sticky; top:0; background:rgba(20,26,52,.96); backdrop-filter:blur(8px); text-align:left; padding:10px 12px;
+     font-weight:600; white-space:nowrap; border-bottom:1px solid var(--stroke)}
+  td{padding:9px 12px; border-bottom:1px solid rgba(255,255,255,.07); white-space:nowrap; color:#dde4ff}
+  tbody tr:hover td{background:rgba(255,255,255,.06)}
+
+  .badge{display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; border:1px solid var(--stroke)}
+  .badge.ok{background:rgba(87,227,165,.16); color:var(--ok); border-color:rgba(87,227,165,.4)}
+  .badge.err{background:rgba(255,123,138,.16); color:var(--err); border-color:rgba(255,123,138,.4)}
+  .badge.warn{background:rgba(255,209,102,.16); color:var(--warn); border-color:rgba(255,209,102,.4)}
+
+  .tabs{display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap}
+  .tab{padding:6px 13px; border-radius:12px; font-size:12px; cursor:pointer; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12)}
+  .tab.active{background:linear-gradient(135deg,rgba(122,162,255,.4),rgba(185,140,255,.4)); border-color:rgba(255,255,255,.3)}
+
+  .composer{padding:14px 20px 18px; border-top:1px solid var(--stroke); display:flex; gap:10px; align-items:flex-end}
+  .composer textarea{resize:none; height:46px; max-height:120px; padding:13px 16px; border-radius:18px}
+  .mic{width:46px;height:46px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:18px;cursor:pointer;
+       background:rgba(255,255,255,.09); border:1px solid var(--stroke); transition:.2s}
+  .mic:hover{background:rgba(255,255,255,.18)}
+  .mic.rec{background:linear-gradient(135deg,#ff5f6d,#ff8a5b); animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,95,109,.55)}50%{box-shadow:0 0 0 12px rgba(255,95,109,0)}}
+  .send{width:46px;height:46px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:17px;cursor:pointer;
+        background:linear-gradient(135deg,var(--accent),var(--accent2)); border:1px solid rgba(255,255,255,.3)}
+
+  .typing{align-self:flex-start; display:flex; gap:5px; padding:14px 18px; border-radius:18px; background:rgba(255,255,255,.08); border:1px solid var(--stroke)}
+  .typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bounce 1.3s infinite}
+  .typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:50; padding:12px 20px; border-radius:14px;
+         font-size:13px; background:rgba(20,26,52,.9); border:1px solid var(--stroke); backdrop-filter:blur(14px);
+         box-shadow:0 10px 30px rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:.25s}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px)}
+
+  .preview{max-height:280px; overflow:auto; border-radius:14px; border:1px solid var(--stroke); background:#fff; color:#111; padding:14px; margin-bottom:12px}
+  .chart-wrap{border-radius:14px; border:1px solid var(--stroke); background:rgba(255,255,255,.05); padding:14px; margin-bottom:14px}
+  .chart-wrap canvas{width:100%; height:260px; display:block}
+
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18); border-radius:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  @media (max-width:980px){ .app{grid-template-columns:1fr} aside{display:none} }
+</style>
+</head>
+<body>
+<div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="glass">
+    <div class="brand">
+      <h1>Sales Order Assistant</h1>
+      <p>Oracle EBS · Glass UI · by CENTROID</p>
+    </div>
+    <div class="side-scroll">
+
+      <div class="sec">
+        <h3>Quick actions</h3>
+        <div class="stack">
+          <button class="btn block" data-quick="Create an order">Create sales order</button>
+          <button class="btn block" data-quick="Show booked orders from 2024">Search orders</button>
+          <button class="btn block" id="btnGetOrder">Get order by number</button>
+          <button class="btn block" id="btnCustOrders">Order details by customer</button>
+          <button class="btn block" id="btnEmailOpen">Email last result</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3>Fields collected</h3>
+        <div id="collected"><div class="empty">No fields collected yet.</div></div>
+      </div>
+
+      <div class="sec">
+        <h3>Automation</h3>
+        <label class="sw">
+          <input type="checkbox" id="autoToggle"><span class="track"></span>
+          <span>Auto-email every result</span>
+        </label>
+        <input id="autoTo" type="email" placeholder="recipient@company.com" style="margin-bottom:8px">
+        <div id="autoStatus" style="font-size:12px;color:var(--muted)"></div>
+
+        <details style="margin-top:12px">
+          <summary>Scheduled reports</summary>
+          <div class="stack">
+            <input id="schedCust" placeholder="Customer (blank = ALL)">
+            <select id="schedFreq">
+              <option>30 Minutes</option><option>1 Hour</option><option selected>Daily</option>
+            </select>
+            <input id="schedTo" type="email" placeholder="Recipient email">
+            <div class="row">
+              <button class="btn sm" id="schedStart">Start</button>
+              <button class="btn sm" id="schedStop">Stop</button>
+            </div>
+            <div id="schedStatus" style="font-size:12px;color:var(--muted)"></div>
+          </div>
+        </details>
+
+        <details><summary>FAQ</summary><div class="stack" id="faqList"></div></details>
+      </div>
+
+      <div class="sec">
+        <button class="btn block ghost" id="btnReset">Clear chat &amp; start over</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="glass">
+    <div class="topbar">
+      <h2 id="stageLabel">Chat</h2>
+      <div class="status">
+        <span class="dot"></span><span id="voiceState">Ready</span>
+        <button class="btn sm ghost" id="btnBack" style="margin-left:10px">Back to chat</button>
+      </div>
+    </div>
+
+    <div class="content" id="content"></div>
+
+    <div class="composer">
+      <button class="mic" id="mic" title="Speak">&#127908;</button>
+      <textarea id="input" rows="1" placeholder="Try: 'Create order for AS54888' · 'Get order 64460' · 'Order details for customer ACME'"></textarea>
+      <button class="send" id="send" title="Send">&#10148;</button>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const content = $("#content");
+let STATE = null, busy = false, renderedMessages = 0;
+
+/* ---------- helpers ---------- */
+function toast(msg, ms = 3200){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), ms);
+}
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function md(s){
+  return esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+async function api(url, body){
+  busy = true; showTyping();
+  try{
+    const res = await fetch(url, {
+      method: body === undefined ? "GET" : "POST",
+      headers: {"Content-Type":"application/json"},
+      body: body === undefined ? undefined : JSON.stringify(body || {})
+    });
+    const data = await res.json();
+    if(!res.ok){ toast(data.error || "Request failed"); return null; }
+    if(data.messages) { STATE = data; render(); }
+    return data;
+  }catch(e){ toast("Network error: " + e.message); return null; }
+  finally{ busy = false; hideTyping(); }
+}
+function showTyping(){
+  if($("#typing")) return;
+  const d = document.createElement("div");
+  d.className = "typing"; d.id = "typing";
+  d.innerHTML = "<i></i><i></i><i></i>";
+  content.appendChild(d); content.scrollTop = content.scrollHeight;
+}
+function hideTyping(){ const t = $("#typing"); if(t) t.remove(); }
+
+/* ---------- render ---------- */
+function render(){
+  if(!STATE) return;
+  content.innerHTML = "";
+  (STATE.messages || []).forEach(m => {
+    const d = document.createElement("div");
+    d.className = "msg " + (m.role === "user" ? "user" : "bot");
+    d.innerHTML = md(m.content);
+    content.appendChild(d);
+  });
+
+  const p = STATE.pending;
+  $("#stageLabel").textContent = labelFor(STATE.stage);
+  if(p) content.appendChild(buildPanel(p));
+
+  renderSidebar();
+  content.scrollTop = content.scrollHeight;
+}
+function labelFor(stage){
+  return ({
+    chat:"Chat", select_item:"Select item", select_price:"Select price list",
+    selling_price:"Selling price", select_term:"Select payment term", select_rep:"Select sales rep",
+    select_line_type:"Select line type", select_customer:"Select customer",
+    select_customer_by_item:"Select customer", select_site:"Select ship-to site",
+    confirm_order:"Confirm order", order_result:"Order result", search_result:"Search results",
+    customer_orders:"Customer orders", send_email:"Send email", add_line:"Add line",
+    dynamic_table:"Query results"
+  })[stage] || "Chat";
+}
+
+function panelShell(title, note){
+  const el = document.createElement("div");
+  el.className = "panel";
+  el.innerHTML = `<h3>${esc(title)}</h3>` + (note ? `<p class="note">${md(note)}</p>` : "");
+  return el;
+}
+
+function buildPanel(p){
+  if(p.type === "selection")        return selectionPanel(p);
+  if(p.type === "input")            return inputPanel(p);
+  if(p.type === "confirm")          return confirmPanel(p);
+  if(p.type === "add_line_confirm") return addLineConfirmPanel(p);
+  if(p.type === "order_result")     return orderResultPanel(p);
+  if(p.type === "search_result")    return searchResultPanel(p);
+  if(p.type === "customer_orders")  return customerOrdersPanel(p);
+  if(p.type === "email")            return emailPanel(p);
+  if(p.type === "dynamic_table")    return dynamicTablePanel(p);
+  return panelShell("Unknown panel");
+}
+
+function dynamicTablePanel(p){
+  const cols = p.columns || [];
+  const rows = p.rows || [];
+  const el = panelShell("Query results", `${rows.length} row(s) returned.`);
+
+  const viz = p.visualization;
+  if(viz && viz.requested){
+    const wrap = document.createElement("div");
+    wrap.className = "chart-wrap";
+    if(viz.available && viz.chart_config){
+      const canvas = document.createElement("canvas");
+      wrap.appendChild(canvas);
+      el.appendChild(wrap);
+      requestAnimationFrame(() => drawChart(canvas, viz.chart_config));
+    } else {
+      wrap.innerHTML = `<p class="note" style="margin:0">${esc(viz.reason || "Visualization is not available for this result.")}</p>`;
+      el.appendChild(wrap);
+    }
+  }
+
+  if(rows.length) el.appendChild(tableEl(cols, rows));
+  else el.innerHTML += `<div class="empty">No rows returned.</div>`;
+
+  const nav = document.createElement("div"); nav.className = "row";
+  nav.innerHTML = `<button class="btn sm" id="dtCsv">Download CSV</button>
+                   <button class="btn sm" id="dtXlsx">Download Excel</button>
+                   <button class="btn sm ghost" id="dtBack">Back to chat</button>`;
+  el.appendChild(nav);
+  nav.querySelector("#dtCsv").onclick = () => downloadCsv("query_results.csv", cols, rows);
+  nav.querySelector("#dtXlsx").onclick = () => window.open("/api/download?format=excel", "_blank");
+  nav.querySelector("#dtBack").onclick = () => api("/api/back");
+  return el;
+}
+
+/* Minimal dependency-free chart renderer (bar / line / pie / doughnut) */
+function drawChart(canvas, cfg){
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || 560, h = canvas.clientHeight || 260;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d"); ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+  ctx.font = "11px -apple-system,Segoe UI,Roboto,sans-serif";
+
+  const labels = cfg.labels || [];
+  const datasets = cfg.datasets || [];
+  if(!labels.length || !datasets.length) return;
+
+  if(cfg.type === "pie" || cfg.type === "doughnut"){
+    const data = datasets[0].data || [];
+    const total = data.reduce((a, b) => a + b, 0) || 1;
+    const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 2 - 20;
+    const inner = cfg.type === "doughnut" ? r * 0.55 : 0;
+    let start = -Math.PI / 2;
+    const palette = ["#7aa2ff","#b98cff","#57e3a5","#ffd166","#ff7b8a","#12c2e9","#f6a821","#6ee7f7"];
+    data.forEach((v, i) => {
+      const angle = (v / total) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, start + angle);
+      ctx.closePath();
+      ctx.fillStyle = palette[i % palette.length];
+      ctx.fill();
+      start += angle;
+    });
+    if(inner > 0){
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.beginPath(); ctx.arc(cx, cy, inner, 0, Math.PI * 2); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+    }
+    let ly = 10;
+    labels.forEach((lbl, i) => {
+      ctx.fillStyle = palette[i % palette.length];
+      ctx.fillRect(10, ly, 10, 10);
+      ctx.fillStyle = "#dfe6ff";
+      ctx.fillText(String(lbl).slice(0, 24), 26, ly + 9);
+      ly += 16;
+      if(ly > h - 10) return;
+    });
+    return;
+  }
+
+  const padL = 34, padB = 26, padT = 10, padR = 10;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const allVals = datasets.flatMap(d => d.data || []);
+  const maxVal = Math.max(...allVals, 0) * 1.1 || 1;
+
+  ctx.strokeStyle = "rgba(255,255,255,.18)";
+  ctx.beginPath();
+  ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH);
+  ctx.stroke();
+
+  const n = labels.length;
+  const stepX = plotW / n;
+
+  if(cfg.type === "line"){
+    datasets.forEach(ds => {
+      ctx.beginPath();
+      ctx.strokeStyle = ds.borderColor || "#7aa2ff";
+      ctx.lineWidth = 2;
+      (ds.data || []).forEach((v, i) => {
+        const x = padL + stepX * i + stepX / 2;
+        const y = padT + plotH - (v / maxVal) * plotH;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    });
+  } else {
+    const groupW = stepX * 0.7;
+    const barW = groupW / datasets.length;
+    datasets.forEach((ds, di) => {
+      ctx.fillStyle = ds.backgroundColor || "#7aa2ff";
+      (ds.data || []).forEach((v, i) => {
+        const x = padL + stepX * i + (stepX - groupW) / 2 + barW * di;
+        const barH = (v / maxVal) * plotH;
+        ctx.fillRect(x, padT + plotH - barH, barW - 2, barH);
+      });
+    });
+  }
+
+  ctx.fillStyle = "rgba(233,238,255,.62)";
+  labels.forEach((lbl, i) => {
+    const x = padL + stepX * i + stepX / 2;
+    ctx.fillText(String(lbl).slice(0, 10), x - 14, padT + plotH + 16);
+  });
+}
+
+function selectionPanel(p){
+  const el = panelShell("Select " + p.label, p.note);
+  const isAdd = p.kind.startsWith("add_line_");
+  const endpoint = "/api/select";
+
+  if(p.searchable){
+    const bar = document.createElement("div");
+    bar.className = "row"; bar.style.marginBottom = "12px";
+    bar.innerHTML = `<input id="selSearch" placeholder="Search ${esc(p.label.toLowerCase())}…" style="flex:1;min-width:200px">
+                     <button class="btn" id="selSearchBtn">Search</button>`;
+    el.appendChild(bar);
+    bar.querySelector("#selSearchBtn").onclick = () =>
+      api(endpoint, {kind:p.kind, op:"search", value: bar.querySelector("#selSearch").value});
+    bar.querySelector("#selSearch").onkeydown = e => { if(e.key === "Enter") bar.querySelector("#selSearchBtn").click(); };
+  }
+
+  const list = document.createElement("div");
+  list.className = "opts";
+  if(!p.options.length){
+    list.innerHTML = `<div class="empty">No records found.</div>`;
+  } else {
+    p.options.forEach(o => {
+      const row = document.createElement("div");
+      row.className = "opt";
+      row.innerHTML = `<div class="n">${o.index + 1}</div>
+                       <div><div class="t">${esc(o.title)}</div><div class="s">${esc(o.sub)}</div></div>`;
+      row.onclick = () => api(endpoint, {kind:p.kind, op:"select", index:o.index});
+      list.appendChild(row);
+    });
+  }
+  el.appendChild(list);
+
+  const nav = document.createElement("div");
+  nav.className = "row";
+  if(p.has_prev) nav.innerHTML += `<button class="btn sm" data-op="prev">Previous</button>`;
+  if(p.has_next) nav.innerHTML += `<button class="btn sm" data-op="next">Next rows</button>`;
+  nav.innerHTML += `<button class="btn sm ghost" data-op="cancel">${isAdd ? "Cancel line" : "Back to chat"}</button>`;
+  el.appendChild(nav);
+  nav.querySelectorAll("button").forEach(b => b.onclick = () => {
+    const op = b.dataset.op;
+    if(op === "cancel") return isAdd ? api("/api/add-line/cancel") : api("/api/back");
+    api(endpoint, {kind:p.kind, op});
+  });
+  return el;
+}
+
+function inputPanel(p){
+  const el = panelShell(p.label, p.note);
+  const isAdd = p.kind.startsWith("add_line_");
+  el.innerHTML += `<input id="panelInput" placeholder="${esc(p.placeholder || "")}" style="margin-bottom:12px">
+                   <div class="row">
+                     <button class="btn primary" id="panelOk">Confirm</button>
+                     <button class="btn ghost" id="panelCancel">${isAdd ? "Cancel line" : "Back to chat"}</button>
+                   </div>`;
+  const submit = () => api("/api/input", {kind:p.kind, value: el.querySelector("#panelInput").value});
+  setTimeout(() => el.querySelector("#panelInput").focus(), 30);
+  el.querySelector("#panelOk").onclick = submit;
+  el.querySelector("#panelInput").onkeydown = e => { if(e.key === "Enter") submit(); };
+  el.querySelector("#panelCancel").onclick = () => isAdd ? api("/api/add-line/cancel") : api("/api/back");
+  return el;
+}
+
+function kvGrid(obj){
+  return `<div class="kv">` + Object.entries(obj || {})
+    .map(([k, v]) => `<div class="cell"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join("") + `</div>`;
+}
+
+function confirmPanel(p){
+  const el = panelShell("Order summary", "Review the details below, then submit to Oracle EBS.");
+  el.innerHTML += kvGrid(p.summary);
+  el.innerHTML += `<div class="row"><button class="btn primary" id="doSubmit">Submit order</button>
+                   <button class="btn ghost" id="doBack">Back to chat</button></div>`;
+  el.querySelector("#doSubmit").onclick = () => api("/api/submit-order");
+  el.querySelector("#doBack").onclick = () => api("/api/back");
+  return el;
+}
+
+function addLineConfirmPanel(p){
+  const el = panelShell(`New line for order #${p.order_number}`, "Review and submit the new order line.");
+  el.innerHTML += kvGrid(p.summary);
+  el.innerHTML += `<div class="row"><button class="btn primary" id="alSubmit">Submit line</button>
+                   <button class="btn ghost" id="alCancel">Cancel</button></div>`;
+  el.querySelector("#alSubmit").onclick = () => api("/api/add-line/submit");
+  el.querySelector("#alCancel").onclick = () => api("/api/add-line/cancel");
+  return el;
+}
+
+function statusBadge(s){
+  const v = String(s || "").toUpperCase();
+  if(v === "S") return `<span class="badge ok">Success</span>`;
+  if(v === "E") return `<span class="badge err">Error</span>`;
+  if(v === "W") return `<span class="badge warn">Warning</span>`;
+  return `<span class="badge">${esc(s)}</span>`;
+}
+
+function orderResultPanel(p){
+  const d = STATE.parsed_result || {header_details:{}, lines:[]};
+  const el = panelShell(p.context || "Order result");
+  el.querySelector("h3").innerHTML += " &nbsp;" + statusBadge(d.status);
+
+  if(d.message && d.message !== "N/A"){
+    el.innerHTML += `<p class="note">${esc(d.message)}</p>`;
+  }
+
+  const groups = {
+    "Identity": ["Order Number","Header ID","Customer PO","Order Category","Order Type"],
+    "Status":   ["Return Status","Flow Status","Booked Flag","Open Flag"],
+    "Parties & money": ["Currency","Payment Term","Price List","Customer","Ship To","Bill To","Salesrep"]
+  };
+  const tabs = document.createElement("div"); tabs.className = "tabs";
+  const body = document.createElement("div");
+  Object.keys(groups).forEach((g, i) => {
+    const t = document.createElement("div");
+    t.className = "tab" + (i === 0 ? " active" : ""); t.textContent = g;
+    t.onclick = () => {
+      tabs.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      body.innerHTML = kvGrid(pick(d.header_details, groups[g]));
+    };
+    tabs.appendChild(t);
+  });
+  body.innerHTML = kvGrid(pick(d.header_details, groups["Identity"]));
+  el.appendChild(tabs); el.appendChild(body);
+
+  if((d.lines || []).length){
+    const cols = ["Line #","Item","Item Description","Qty Ordered","UOM","Unit List Price","Unit Selling Price","Line Type","Flow Status"];
+    el.appendChild(tableEl(cols, d.lines.map(l => cols.map(c => l[c]))));
+  }
+
+  const row = document.createElement("div");
+  row.className = "row";
+  if(STATE.add_line && STATE.add_line.available)
+    row.innerHTML += `<button class="btn primary" id="addLine">Add a line to #${esc(STATE.add_line.order_number)}</button>`;
+  row.innerHTML += `<button class="btn" id="emailIt">Email this result</button>
+                    <button class="btn" id="dlJson">Download JSON</button>
+                    <button class="btn ghost" id="backChat">Back to chat</button>`;
+  el.appendChild(row);
+  if(row.querySelector("#addLine")) row.querySelector("#addLine").onclick = () => api("/api/add-line/start");
+  row.querySelector("#emailIt").onclick = () => api("/api/email/open");
+  row.querySelector("#dlJson").onclick = () => downloadText("order_result.json", JSON.stringify(STATE.raw_result, null, 2));
+  row.querySelector("#backChat").onclick = () => api("/api/back");
+  return el;
+}
+function pick(obj, keys){
+  const out = {};
+  keys.forEach(k => { const v = obj[k]; if(v !== undefined && v !== null && v !== "N/A" && v !== "") out[k] = v; });
+  return out;
+}
+
+function tableEl(cols, rows){
+  const wrap = document.createElement("div");
+  wrap.className = "tablewrap";
+  wrap.innerHTML = `<table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${r.map(v => `<td>${esc(v ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  return wrap;
+}
+
+let searchPage = 0, custPage = 0;
+const PAGE = 50;
+
+function searchResultPanel(p){
+  const res = STATE.search_result || {rows:[], columns:[], total_count:0};
+  const el = panelShell("Advanced search results", `${res.total_count} order(s) matched your filters.`);
+  el.innerHTML += `<div class="metrics">
+      <div class="metric"><b>Total orders</b><span>${res.total_count}</span></div>
+      <div class="metric"><b>Rows returned</b><span>${res.rows.length}</span></div>
+      <div class="metric"><b>Year</b><span>${esc(p.filters.year || "—")}</span></div>
+      <div class="metric"><b>Status</b><span>${esc(p.filters.status || "—")}</span></div>
+    </div>`;
+
+  const total = res.rows.length;
+  if(searchPage * PAGE >= total) searchPage = 0;
+  const slice = res.rows.slice(searchPage * PAGE, searchPage * PAGE + PAGE);
+  el.appendChild(tableEl(res.columns, slice));
+
+  const nav = document.createElement("div"); nav.className = "row";
+  nav.innerHTML =
+    `<span style="font-size:12px;color:var(--muted);align-self:center">Rows ${total ? searchPage*PAGE+1 : 0}–${Math.min(searchPage*PAGE+PAGE, total)} of ${total}</span>
+     ${searchPage > 0 ? `<button class="btn sm" id="sPrev">Previous</button>` : ""}
+     ${(searchPage+1)*PAGE < total ? `<button class="btn sm" id="sNext">Next</button>` : ""}
+     <button class="btn sm" id="sCsv">Download CSV</button>
+     <button class="btn sm" id="sMail">Email results</button>
+     <button class="btn sm ghost" id="sBack">Back to chat</button>`;
+  el.appendChild(nav);
+  if(nav.querySelector("#sPrev")) nav.querySelector("#sPrev").onclick = () => { searchPage--; render(); };
+  if(nav.querySelector("#sNext")) nav.querySelector("#sNext").onclick = () => { searchPage++; render(); };
+  nav.querySelector("#sCsv").onclick = () => downloadCsv("search_results.csv", res.columns, res.rows);
+  nav.querySelector("#sMail").onclick = () => api("/api/email/open");
+  nav.querySelector("#sBack").onclick = () => api("/api/back");
+  return el;
+}
+
+function customerOrdersPanel(p){
+  const el = panelShell(`Order details — ${p.customer_name}`,
+                        p.rows.length ? null : "No orders found. Verify the exact customer name as stored in Oracle.");
+  if(p.metrics){
+    el.innerHTML += `<div class="metrics">` + Object.entries(p.metrics)
+      .map(([k, v]) => `<div class="metric"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join("") + `</div>`;
+  }
+  const total = p.rows.length;
+  if(custPage * PAGE >= total) custPage = 0;
+  if(total) el.appendChild(tableEl(p.columns, p.rows.slice(custPage * PAGE, custPage * PAGE + PAGE)));
+
+  const nav = document.createElement("div"); nav.className = "row";
+  nav.innerHTML =
+    `<span style="font-size:12px;color:var(--muted);align-self:center">Rows ${total ? custPage*PAGE+1 : 0}–${Math.min(custPage*PAGE+PAGE, total)} of ${total}</span>
+     ${custPage > 0 ? `<button class="btn sm" id="cPrev">Previous</button>` : ""}
+     ${(custPage+1)*PAGE < total ? `<button class="btn sm" id="cNext">Next</button>` : ""}
+     <button class="btn sm" id="cCsv">Download CSV</button>
+     <button class="btn sm" id="cSearch">Search another customer</button>
+     <button class="btn sm" id="cMail">Email results</button>
+     <button class="btn sm ghost" id="cBack">Back to chat</button>`;
+  el.appendChild(nav);
+  if(nav.querySelector("#cPrev")) nav.querySelector("#cPrev").onclick = () => { custPage--; render(); };
+  if(nav.querySelector("#cNext")) nav.querySelector("#cNext").onclick = () => { custPage++; render(); };
+  nav.querySelector("#cCsv").onclick = () => downloadCsv(`orders_${p.customer_name}.csv`, p.columns, p.rows);
+  nav.querySelector("#cSearch").onclick = askCustomer;
+  nav.querySelector("#cMail").onclick = () => api("/api/email/open");
+  nav.querySelector("#cBack").onclick = () => api("/api/back");
+  return el;
+}
+
+function emailPanel(p){
+  const el = panelShell("Send email", "The last operation's data is attached as a formatted HTML table.");
+  el.innerHTML += `<div class="stack" style="margin-bottom:12px">
+      <input id="mTo" type="email" placeholder="recipient@company.com" value="${esc(p.to || "")}">
+      <input id="mSub" value="${esc(p.subject || "")}">
+      <textarea id="mBody" rows="3">${esc(p.body || "")}</textarea>
+    </div>`;
+  if(p.html){
+    const det = document.createElement("details");
+    det.innerHTML = `<summary>Preview attached data</summary><div class="preview">${p.html}</div>`;
+    el.appendChild(det);
+  } else {
+    el.innerHTML += `<p class="note">No recent operation data found to attach.</p>`;
+  }
+  const row = document.createElement("div"); row.className = "row"; row.style.marginTop = "12px";
+  row.innerHTML = `<button class="btn primary" id="mSend">Send email</button>
+                   <button class="btn ghost" id="mBack">Back to chat</button>`;
+  el.appendChild(row);
+  row.querySelector("#mSend").onclick = async () => {
+    const r = await api("/api/email/send", {
+      to: el.querySelector("#mTo").value.trim(),
+      subject: el.querySelector("#mSub").value,
+      body: el.querySelector("#mBody").value
+    });
+    if(r) toast(r.detail || "");
+  };
+  row.querySelector("#mBack").onclick = () => api("/api/back");
+  return el;
+}
+
+/* ---------- sidebar ---------- */
+function renderSidebar(){
+  const c = STATE.collected || {};
+  const box = $("#collected");
+  const keys = Object.keys(c);
+  box.innerHTML = keys.length
+    ? keys.map(k => `<div class="chip"><b>${esc(k)}</b><span>${esc(c[k])}</span></div>`).join("")
+    : `<div class="empty">No fields collected yet.</div>`;
+
+  const auto = STATE.auto_email || {};
+  $("#autoToggle").checked = !!auto.enabled;
+  if(document.activeElement !== $("#autoTo")) $("#autoTo").value = auto.to || "";
+  const st = {sending:"Sending in background…", success:"Last auto-email sent.",
+              failed:"Last auto-email failed: " + (auto.error || ""), no_recipient:"Skipped — no recipient set."};
+  $("#autoStatus").textContent = st[auto.status] || (auto.enabled ? "Auto-send active." : "Auto-send is off.");
+
+  const sc = STATE.schedule || {};
+  $("#schedStatus").textContent = sc.running
+    ? `Running · ${sc.frequency} · ${sc.customer || "ALL customers"} → ${sc.to}` : "Not scheduled.";
+
+  $("#voiceState").textContent = STATE.voice_available ? "Voice ready" : "Voice unavailable";
+  $("#mic").disabled = !STATE.voice_available;
+}
+
+/* ---------- downloads ---------- */
+function downloadText(name, text, type = "application/json"){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type}));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+function downloadCsv(name, cols, rows){
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = [cols.map(q).join(","), ...rows.map(r => r.map(q).join(","))].join("\n");
+  downloadText(name, csv, "text/csv");
+}
+
+/* ---------- composer ---------- */
+const input = $("#input");
+input.addEventListener("input", () => {
+  input.style.height = "46px";
+  input.style.height = Math.min(input.scrollHeight, 120) + "px";
+});
+input.addEventListener("keydown", e => {
+  if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+});
+$("#send").onclick = send;
+
+async function send(){
+  const text = input.value.trim();
+  if(!text || busy) return;
+  input.value = ""; input.style.height = "46px";
+  await api("/api/chat", {message: text});
+}
+
+/* ---------- voice ---------- */
+$("#mic").onclick = async () => {
+  if(busy || !STATE || !STATE.voice_available) return;
+  const mic = $("#mic");
+  mic.classList.add("rec"); $("#voiceState").textContent = "Listening…";
+  try{
+    const res = await fetch("/api/voice/listen", {
+      method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({duration:5})
+    });
+    const data = await res.json();
+    if(data.text){ input.value = data.text; await send(); }
+    else toast(data.error || "Nothing heard — try again.");
+  }catch(e){ toast("Voice error: " + e.message); }
+  finally{ mic.classList.remove("rec"); $("#voiceState").textContent = "Voice ready"; }
+};
+
+/* ---------- sidebar actions ---------- */
+document.querySelectorAll("[data-quick]").forEach(b =>
+  b.onclick = () => api("/api/chat", {message: b.dataset.quick}));
+
+$("#btnGetOrder").onclick = () => {
+  const n = prompt("Enter the order number:");
+  if(n) api("/api/get-order", {order_number: n});
+};
+function askCustomer(){
+  const n = prompt("Enter the exact customer name (as stored in Oracle):");
+  if(n){ custPage = 0; api("/api/customer-orders", {customer_name: n}); }
+}
+$("#btnCustOrders").onclick = askCustomer;
+$("#btnEmailOpen").onclick = () => api("/api/email/open");
+$("#btnBack").onclick = () => api("/api/back");
+$("#btnReset").onclick = () => { searchPage = custPage = 0; api("/api/reset"); };
+
+$("#autoToggle").onchange = () => api("/api/auto-email", {enabled: $("#autoToggle").checked, to: $("#autoTo").value});
+$("#autoTo").onchange = () => api("/api/auto-email", {enabled: $("#autoToggle").checked, to: $("#autoTo").value});
+
+$("#schedStart").onclick = () => api("/api/schedule/start", {
+  customer: $("#schedCust").value, frequency: $("#schedFreq").value, to: $("#schedTo").value.trim()
+});
+$("#schedStop").onclick = () => api("/api/schedule/stop");
+
+/* ---------- boot ---------- */
+(async function boot(){
+  const faq = await (await fetch("/api/faq")).json();
+  $("#faqList").innerHTML = faq.faq.map((f, i) =>
+    `<button class="btn sm block" data-faq="${i}" style="text-align:left;justify-content:flex-start">${esc(f.question)}</button>`).join("");
+  $("#faqList").querySelectorAll("[data-faq]").forEach(b =>
+    b.onclick = () => api("/api/chat", {message: faq.faq[b.dataset.faq].question}));
+  await api("/api/state");
+})();
+</script>
+</body>
+</html>

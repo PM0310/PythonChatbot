@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Dashboard — Sales Order Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --bg: #f1f5f9;
+            --bg-card: #ffffff;
+            --text: #1a1a1a;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            background: var(--accent);
+            color: white;
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-icon {
+            width: 34px; height: 34px;
+            background: rgba(255,255,255,0.18);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .header-title { font-size: 1rem; font-weight: 700; }
+        .header-sub   { font-size: 0.76rem; opacity: 0.78; }
+        .header-nav   { margin-left: auto; display: flex; gap: 8px; }
+        .nav-btn {
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .nav-btn.outline {
+            background: rgba(255,255,255,0.12);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.28);
+        }
+        .nav-btn.outline:hover { background: rgba(255,255,255,0.22); }
+        .nav-btn.active {
+            background: white;
+            color: var(--accent);
+            border: 1px solid white;
+        }
+
+        /* ── STATUS BAR ── */
+        .status-bar {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 10px 24px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .status-bar-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            flex-shrink: 0;
+        }
+        .status-indicators { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-pill.ok   { background: #dcfce7; color: #166534; }
+        .status-pill.err  { background: #fee2e2; color: #991b1b; }
+        .status-pill.warn { background: #fef9c3; color: #854d0e; }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .status-pill.ok   .status-dot { background: #16a34a; }
+        .status-pill.err  .status-dot { background: #dc2626; }
+        .status-pill.warn .status-dot { background: #d97706; }
+        .refresh-info {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        /* ── MAIN LAYOUT ── */
+        .main {
+            padding: 20px 24px;
+            display: grid;
+            grid-template-columns: 1fr 330px;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        @media (max-width: 960px) { .main { grid-template-columns: 1fr; } }
+
+        /* ── SECTION TITLE ── */
+        .section-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        /* ── OPERATIONS GRID ── */
+        .ops-grid { display: flex; flex-direction: column; gap: 14px; }
+
+        .category-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .category-header {
+            padding: 10px 16px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .category-icon { font-size: 1.05rem; }
+        .category-name { font-size: 0.88rem; font-weight: 700; }
+        .category-count {
+            margin-left: auto;
+            background: #e0e7ff;
+            color: #3730a3;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        .ops-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        }
+        .op-card {
+            padding: 12px 14px;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            transition: background 0.12s;
+        }
+        .op-card:hover { background: #f0f4ff; }
+        .op-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+        .op-name { font-size: 0.83rem; font-weight: 600; }
+        .op-badge {
+            font-size: 0.67rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .op-badge.available   { background: #dcfce7; color: #166534; }
+        .op-badge.unavailable { background: #fee2e2; color: #991b1b; }
+        .op-badge.chat        { background: #dbeafe; color: #1e40af; }
+        .op-badge.ml          { background: #fef3c7; color: #92400e; }
+        .op-desc     { font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; }
+        .op-endpoint { font-size: 0.68rem; color: #94a3b8; font-family: monospace; margin-top: 1px; }
+        .op-launch-btn {
+            margin-top: 6px;
+            padding: 4px 10px;
+            background: #eff6ff;
+            color: var(--accent);
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            font-size: 0.73rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            width: fit-content;
+            transition: background 0.12s;
+        }
+        .op-launch-btn:hover { background: #dbeafe; }
+
+        /* ── RIGHT PANEL ── */
+        .right-panel { display: flex; flex-direction: column; gap: 14px; }
+
+        /* ── GENERIC CARD ── */
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 10px 16px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.83rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .panel-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+        /* ── MONITOR ROWS ── */
+        .monitor-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 10px;
+        }
+        .monitor-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .monitor-row-top {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            justify-content: space-between;
+        }
+        .monitor-name { font-size: 0.82rem; font-weight: 600; }
+        .badge-active   { background: #dcfce7; color: #166534; font-size: 0.69rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+        .badge-inactive { background: #f1f5f9; color: #64748b; font-size: 0.69rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+        .badge-enabled  { background: #dbeafe; color: #1e40af; font-size: 0.69rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+        .monitor-detail { font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; }
+        .monitor-progress { height: 5px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+        .monitor-progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s; }
+
+        /* ── LAST OPERATION ── */
+        .last-op-type    { font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 5px; }
+        .last-op-summary { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
+        .download-row    { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+        .dl-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.73rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.12s;
+        }
+        .dl-btn:hover { opacity: 0.85; }
+        .dl-btn.excel { background: #1e40af; color: white; }
+        .dl-btn.csv   { background: #065f46; color: white; }
+        .dl-btn.json  { background: #6d28d9; color: white; }
+
+        /* ── QUICK LAUNCH ── */
+        .quick-body { padding: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .quick-chip {
+            padding: 5px 10px;
+            border: 1px solid #c7d2fe;
+            background: #eef2ff;
+            color: #3730a3;
+            border-radius: 6px;
+            font-size: 0.73rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.12s;
+        }
+        .quick-chip:hover { background: #e0e7ff; }
+
+        /* ── API REFERENCE ── */
+        .api-ref { font-size: 0.74rem; color: #64748b; line-height: 1.7; }
+        .api-ref strong { color: var(--text); }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<header class="header">
+    <div class="header-icon">📦</div>
+    <div>
+        <div class="header-title">Sales Order Assistant</div>
+        <div class="header-sub">Agent Operations Dashboard</div>
+    </div>
+    <nav class="header-nav">
+        <a class="nav-btn outline" href="/">💬 Chat</a>
+        <a class="nav-btn active"  href="/dashboard">📊 Dashboard</a>
+    </nav>
+</header>
+
+<!-- ══════════════ STATUS BAR ══════════════ -->
+<div class="status-bar">
+    <span class="status-bar-label">System</span>
+    <div class="status-indicators" id="statusIndicators">
+        <span class="status-pill warn"><span class="status-dot"></span>Loading…</span>
+    </div>
+    <span class="refresh-info" id="refreshInfo">Auto-refresh every 30 s</span>
+</div>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<main class="main">
+
+    <!-- ══ LEFT — Operations Grid ══ -->
+    <div class="ops-grid">
+        <div class="section-title">All Agent Operations</div>
+
+        <!-- ── Query & Reports ── -->
+        <div class="category-card">
+            <div class="category-header">
+                <span class="category-icon">🔍</span>
+                <span class="category-name">Query &amp; Reports</span>
+                <span class="category-count">6</span>
+            </div>
+            <div class="ops-list">
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Natural Language Chat</span><span class="op-badge chat">AI</span></div>
+                    <div class="op-desc">Ask anything in plain English. AI extracts intent, generates SQL or calls ERP APIs automatically.</div>
+                    <div class="op-endpoint">POST /api/chat</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Get Order Details</span><span class="op-badge chat">Chat</span></div>
+                    <div class="op-desc">Fetch full sales order header and line items for a specific order number.</div>
+                    <div class="op-endpoint">via /api/chat → ERP REST</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Customer Orders</span><span class="op-badge chat">Chat</span></div>
+                    <div class="op-desc">Retrieve all orders for a customer by name from ERP REST service.</div>
+                    <div class="op-endpoint">via /api/chat → ERP REST</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Orders Advanced</span><span class="op-badge available">REST</span></div>
+                    <div class="op-desc">Filter orders by status (BOOKED, ENTERED, CANCELLED…), date range, or year.</div>
+                    <div class="op-endpoint">GET /api/orders-advanced</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Highly Ordered Items</span><span class="op-badge available">DB</span></div>
+                    <div class="op-desc">Top N items ranked by order frequency from Oracle OE + MTL tables.</div>
+                    <div class="op-endpoint">via /api/chat → Oracle DB</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Dynamic SQL Query</span><span class="op-badge chat">AI + DB</span></div>
+                    <div class="op-desc">AI generates and executes safe SELECT queries against Oracle ERP tables from natural language.</div>
+                    <div class="op-endpoint">via /api/chat → AI → Oracle DB</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Order Management ── -->
+        <div class="category-card">
+            <div class="category-header">
+                <span class="category-icon">📋</span>
+                <span class="category-name">Order Management</span>
+                <span class="category-count">3</span>
+            </div>
+            <div class="ops-list">
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Create Sales Order</span><span class="op-badge available">REST</span></div>
+                    <div class="op-desc">Guided 6-step wizard: Item → Quantity → Customer → Ship-To → Pricing → Submit.</div>
+                    <div class="op-endpoint">POST /api/create-order</div>
+                    <a class="op-launch-btn" href="/">→ Create Order</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Add Line Item</span><span class="op-badge available">REST</span></div>
+                    <div class="op-desc">Append a new line to an existing sales order by header ID or order number.</div>
+                    <div class="op-endpoint">POST /api/add-line</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Draft Resolution</span><span class="op-badge available">DB</span></div>
+                    <div class="op-desc">Resolve partial order data — item, customer, pricing, payment terms, and rep — from Oracle master data.</div>
+                    <div class="op-endpoint">POST /api/create-order/draft</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Email & Notifications ── -->
+        <div class="category-card">
+            <div class="category-header">
+                <span class="category-icon">📧</span>
+                <span class="category-name">Email &amp; Notifications</span>
+                <span class="category-count">4</span>
+            </div>
+            <div class="ops-list">
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Send Email Report</span><span class="op-badge available">SMTP</span></div>
+                    <div class="op-desc">Send the last operation's result as a formatted HTML email to any recipient.</div>
+                    <div class="op-endpoint">POST /api/send-email</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Email Preview</span><span class="op-badge available">GET</span></div>
+                    <div class="op-desc">Preview the exact HTML content of the email that would be sent for the last operation.</div>
+                    <div class="op-endpoint">GET /api/email-preview</div>
+                    <a class="op-launch-btn" href="/api/email-preview" target="_blank">→ Preview</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Auto Email</span><span class="op-badge" id="badge-auto-email">—</span></div>
+                    <div class="op-desc">Automatically send an email after every successful operation. Configure in Settings.</div>
+                    <div class="op-endpoint">POST /api/auto-email</div>
+                    <a class="op-launch-btn" href="/">→ Configure</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Email Scheduler</span><span class="op-badge" id="badge-scheduler">—</span></div>
+                    <div class="op-desc">Recurring scheduled email reports at a configurable interval (30 min – 24 hours).</div>
+                    <div class="op-endpoint">POST /api/scheduler/start|stop</div>
+                    <a class="op-launch-btn" href="/">→ Configure</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Automation ── -->
+        <div class="category-card">
+            <div class="category-header">
+                <span class="category-icon">🔄</span>
+                <span class="category-name">Automation</span>
+                <span class="category-count">1</span>
+            </div>
+            <div class="ops-list">
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Auto Loop</span><span class="op-badge" id="badge-auto-loop">—</span></div>
+                    <div class="op-desc">Sequentially process orders for every customer in Oracle and email results per customer.</div>
+                    <div class="op-endpoint">POST /api/auto-loop/start|stop</div>
+                    <a class="op-launch-btn" href="/">→ Configure</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Data Visualization ── -->
+        <div class="category-card">
+            <div class="category-header">
+                <span class="category-icon">📊</span>
+                <span class="category-name">Data Visualization</span>
+                <span class="category-count">4</span>
+            </div>
+            <div class="ops-list">
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Bar Chart</span><span class="op-badge ml">Matplotlib</span></div>
+                    <div class="op-desc">Server-rendered bar chart from query results. Add "as bar chart" to your query.</div>
+                    <div class="op-endpoint">via /api/chat → Matplotlib PNG (base64)</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Line Chart</span><span class="op-badge ml">Matplotlib</span></div>
+                    <div class="op-desc">Trend line for time-series data. Add "as line chart" or "show trend" to your query.</div>
+                    <div class="op-endpoint">via /api/chat → Matplotlib PNG (base64)</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Pie Chart</span><span class="op-badge ml">Matplotlib</span></div>
+                    <div class="op-desc">Proportional distribution chart. Add "as pie chart" or "by status" to your query.</div>
+                    <div class="op-endpoint">via /api/chat → Matplotlib PNG (base64)</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Doughnut Chart</span><span class="op-badge ml">Matplotlib</span></div>
+                    <div class="op-desc">Doughnut variant of pie chart. Add "as doughnut" to any distribution query.</div>
+                    <div class="op-endpoint">via /api/chat → Matplotlib PNG (base64)</div>
+                    <a class="op-launch-btn" href="/">→ Open Chat</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Data Export ── -->
+        <div class="category-card">
+            <div class="category-header">
+                <span class="category-icon">⬇️</span>
+                <span class="category-name">Data Export</span>
+                <span class="category-count">3</span>
+            </div>
+            <div class="ops-list">
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Excel Export</span><span class="op-badge" id="badge-excel">—</span></div>
+                    <div class="op-desc">Download last query result as a formatted .xlsx spreadsheet with styled headers.</div>
+                    <div class="op-endpoint">GET /api/download?format=excel</div>
+                    <a class="op-launch-btn" href="/api/download?format=excel">⬇ Download</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">CSV Export</span><span class="op-badge available">GET</span></div>
+                    <div class="op-desc">Download last query result as a plain comma-separated values file.</div>
+                    <div class="op-endpoint">GET /api/download?format=csv</div>
+                    <a class="op-launch-btn" href="/api/download?format=csv">⬇ Download</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">JSON Export</span><span class="op-badge available">GET</span></div>
+                    <div class="op-desc">Download last query result as a structured JSON file.</div>
+                    <div class="op-endpoint">GET /api/download?format=json</div>
+                    <a class="op-launch-btn" href="/api/download?format=json">⬇ Download</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Voice & TTS ── -->
+        <div class="category-card">
+            <div class="category-header">
+                <span class="category-icon">🎤</span>
+                <span class="category-name">Voice &amp; Speech</span>
+                <span class="category-count">2</span>
+            </div>
+            <div class="ops-list">
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Voice Input</span><span class="op-badge" id="badge-voice">—</span></div>
+                    <div class="op-desc">Record voice and transcribe to text using Vosk offline speech recognition engine.</div>
+                    <div class="op-endpoint">POST /api/voice</div>
+                    <a class="op-launch-btn" href="/">→ Use in Chat</a>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Text-to-Speech</span><span class="op-badge" id="badge-tts">—</span></div>
+                    <div class="op-desc">Read out agent responses using pyttsx3 offline TTS engine.</div>
+                    <div class="op-endpoint">POST /api/speak</div>
+                    <a class="op-launch-btn" href="/">→ Use in Chat</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Lookup APIs ── -->
+        <div class="category-card">
+            <div class="category-header">
+                <span class="category-icon">🔎</span>
+                <span class="category-name">Lookup APIs  <small style="font-weight:400;color:#94a3b8;">(Create Order Wizard)</small></span>
+                <span class="category-count">6</span>
+            </div>
+            <div class="ops-list">
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Item Search</span><span class="op-badge available">GET</span></div>
+                    <div class="op-desc">Search MTL_SYSTEM_ITEMS_B by item code prefix with pagination.</div>
+                    <div class="op-endpoint">GET /api/lookup-items</div>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Customer Search</span><span class="op-badge available">GET</span></div>
+                    <div class="op-desc">Search HZ_CUST_ACCOUNTS / HZ_PARTIES by partial name match.</div>
+                    <div class="op-endpoint">GET /api/lookup-customers</div>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Customer Sites</span><span class="op-badge available">GET</span></div>
+                    <div class="op-desc">Fetch active ship-to sites for a customer account from HZ tables.</div>
+                    <div class="op-endpoint">GET /api/lookup-customer-sites</div>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Price Lists</span><span class="op-badge available">GET</span></div>
+                    <div class="op-desc">Fetch applicable price lists from QP_LIST_HEADERS_B for a selected item.</div>
+                    <div class="op-endpoint">GET /api/lookup-prices</div>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Payment Terms</span><span class="op-badge available">GET</span></div>
+                    <div class="op-desc">Fetch active payment terms from RA_TERMS_VL.</div>
+                    <div class="op-endpoint">GET /api/lookup-payment-terms</div>
+                </div>
+                <div class="op-card">
+                    <div class="op-card-top"><span class="op-name">Sales Reps</span><span class="op-badge available">GET</span></div>
+                    <div class="op-desc">Fetch active sales representatives from JTF_RS_SALESREPS by org.</div>
+                    <div class="op-endpoint">GET /api/lookup-salesreps</div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /ops-grid -->
+
+    <!-- ══ RIGHT — Monitoring + Status ══ -->
+    <div class="right-panel">
+
+        <!-- Live Monitoring -->
+        <div class="panel-card">
+            <div class="panel-header">📡 Live Monitoring</div>
+            <div class="panel-body">
+
+                <div class="monitor-row">
+                    <div class="monitor-row-top">
+                        <span class="monitor-name">Email Scheduler</span>
+                        <span class="badge-inactive" id="sched-badge">INACTIVE</span>
+                    </div>
+                    <div class="monitor-detail" id="sched-detail">Not started.</div>
+                </div>
+
+                <div class="monitor-row">
+                    <div class="monitor-row-top">
+                        <span class="monitor-name">Auto Loop</span>
+                        <span class="badge-inactive" id="loop-badge">INACTIVE</span>
+                    </div>
+                    <div class="monitor-detail" id="loop-detail">Not running.</div>
+                    <div class="monitor-progress" id="loop-progress-wrap" style="display:none;">
+                        <div class="monitor-progress-fill" id="loop-progress-fill" style="width:0%"></div>
+                    </div>
+                </div>
+
+                <div class="monitor-row">
+                    <div class="monitor-row-top">
+                        <span class="monitor-name">Auto Email</span>
+                        <span class="badge-inactive" id="autoemail-badge">DISABLED</span>
+                    </div>
+                    <div class="monitor-detail" id="autoemail-detail">Auto-send after operations: off.</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Last Operation -->
+        <div class="panel-card">
+            <div class="panel-header">📋 Last Operation</div>
+            <div class="panel-body" style="gap:4px;">
+                <div class="last-op-type"    id="lastOpType">No operation yet.</div>
+                <div class="last-op-summary" id="lastOpSummary">Run a query or operation from the chat to see results here.</div>
+                <div class="download-row"    id="downloadRow" style="display:none;">
+                    <a class="dl-btn excel" href="/api/download?format=excel">⬇ Excel</a>
+                    <a class="dl-btn csv"   href="/api/download?format=csv">⬇ CSV</a>
+                    <a class="dl-btn json"  href="/api/download?format=json">⬇ JSON</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Launch -->
+        <div class="panel-card">
+            <div class="panel-header">⚡ Quick Launch</div>
+            <div class="quick-body">
+                <a class="quick-chip" href="/">Track order 67965</a>
+                <a class="quick-chip" href="/">Show highly ordered items</a>
+                <a class="quick-chip" href="/">Orders this month</a>
+                <a class="quick-chip" href="/">BOOKED orders — Vision</a>
+                <a class="quick-chip" href="/">Revenue by customer bar chart</a>
+                <a class="quick-chip" href="/">Order status pie chart</a>
+                <a class="quick-chip" href="/">Monthly order trend chart</a>
+                <a class="quick-chip" href="/">Create a new order</a>
+                <a class="quick-chip" href="/">Send email report</a>
+            </div>
+        </div>
+
+        <!-- API Reference -->
+        <div class="panel-card">
+            <div class="panel-header">📖 API Reference</div>
+            <div class="panel-body">
+                <div class="api-ref">
+                    <strong>Total endpoints:</strong> 30+<br>
+                    <strong>Chat:</strong> POST /api/chat<br>
+                    <strong>Orders:</strong> /api/create-order, /api/add-line<br>
+                    <strong>Email:</strong> /api/send-email, /api/scheduler/*<br>
+                    <strong>Automation:</strong> /api/auto-loop/*, /api/auto-email<br>
+                    <strong>Export:</strong> /api/download?format=excel|csv|json<br>
+                    <strong>Lookup:</strong> /api/lookup-items|customers|prices…<br>
+                    <strong>Voice:</strong> /api/voice, /api/speak<br>
+                    <strong>Status:</strong> /api/scheduler/status, /api/auto-loop/status<br>
+                    <strong>Dashboard:</strong> GET /api/dashboard
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /right-panel -->
+
+</main><!-- /main -->
+
+<script>
+// ── Dashboard data polling ──
+const REFRESH_MS = 30000;
+
+function buildStatusPills(sys) {
+    const items = [
+        { label: 'Oracle DB',   ok: sys.oracle_db },
+        { label: 'AI Token',    ok: sys.ai_token },
+        { label: 'Matplotlib',  ok: sys.matplotlib },
+        { label: 'Excel',       ok: sys.excel_export },
+        { label: 'Voice',       ok: sys.voice_input },
+        { label: 'TTS',         ok: sys.text_to_speech },
+    ];
+    document.getElementById('statusIndicators').innerHTML = items.map(i =>
+        `<span class="status-pill ${i.ok ? 'ok' : 'err'}"><span class="status-dot"></span>${i.label}</span>`
+    ).join('');
+}
+
+function setBadge(id, ok, labelOk, labelErr) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = ok ? labelOk : labelErr;
+    el.className = 'op-badge ' + (ok ? 'available' : 'unavailable');
+}
+
+function setMonitorBadge(id, active, labelActive, labelInactive, useEnabled) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = active ? labelActive : labelInactive;
+    el.className = active ? (useEnabled ? 'badge-enabled' : 'badge-active') : 'badge-inactive';
+}
+
+function applyDashboard(data) {
+    const sys = data.system || {};
+    buildStatusPills(sys);
+
+    // Dependency-based op badges
+    setBadge('badge-excel', sys.excel_export, 'openpyxl', 'Not Installed');
+    setBadge('badge-voice', sys.voice_input,  'Vosk',     'Not Installed');
+    setBadge('badge-tts',   sys.text_to_speech, 'pyttsx3','Not Installed');
+
+    // Auto email
+    const ae = data.auto_email || {};
+    setMonitorBadge('badge-auto-email', ae.enabled, 'ENABLED', 'DISABLED', true);
+    setMonitorBadge('autoemail-badge',  ae.enabled, 'ENABLED', 'DISABLED', true);
+    document.getElementById('autoemail-detail').textContent = ae.enabled
+        ? `Auto-send after operations → ${ae.to || '(no recipient set)'}`
+        : 'Auto-send after operations: off.';
+
+    // Scheduler
+    const sc = data.scheduler || {};
+    setMonitorBadge('badge-scheduler', sc.active, 'ACTIVE', 'INACTIVE');
+    setMonitorBadge('sched-badge',     sc.active, 'ACTIVE', 'INACTIVE');
+    if (sc.active) {
+        const parts = [];
+        if (sc.interval_mins) parts.push(`Every ${sc.interval_mins} min`);
+        if (sc.to_email)      parts.push(`→ ${sc.to_email}`);
+        if (sc.runs != null)  parts.push(`Runs: ${sc.runs}`);
+        if (sc.last_run)      parts.push(`Last: ${sc.last_run}`);
+        document.getElementById('sched-detail').textContent = parts.join('  |  ');
+    } else {
+        document.getElementById('sched-detail').textContent = sc.runs
+            ? `Not active. Last run: ${sc.last_run || '—'} (${sc.runs} total runs)`
+            : 'Not started.';
+    }
+
+    // Auto loop
+    const al = data.auto_loop || {};
+    setMonitorBadge('badge-auto-loop', al.active, 'ACTIVE', 'INACTIVE');
+    setMonitorBadge('loop-badge',      al.active, 'ACTIVE', 'INACTIVE');
+    const progressWrap = document.getElementById('loop-progress-wrap');
+    const progressFill = document.getElementById('loop-progress-fill');
+    if (al.active && al.total_customers > 0) {
+        const pct = Math.round((al.processed / al.total_customers) * 100);
+        progressWrap.style.display = 'block';
+        progressFill.style.width   = pct + '%';
+        document.getElementById('loop-detail').textContent =
+            `${al.current_customer || '…'}  |  ${al.processed}/${al.total_customers} customers (${pct}%)`;
+    } else {
+        progressWrap.style.display = 'none';
+        document.getElementById('loop-detail').textContent = al.processed
+            ? `Processed ${al.processed} customers in last run.`
+            : 'Not running.';
+    }
+
+    // Last operation
+    const lo = data.last_operation || {};
+    if (lo.type) {
+        document.getElementById('lastOpType').textContent    = lo.type.replace(/_/g, ' ').toUpperCase();
+        document.getElementById('lastOpSummary').textContent = lo.ai_summary || 'No AI summary available.';
+        document.getElementById('downloadRow').style.display = lo.has_data ? 'flex' : 'none';
+    } else {
+        document.getElementById('lastOpType').textContent    = 'No operation yet.';
+        document.getElementById('lastOpSummary').textContent = 'Run a query or operation from the chat to see results here.';
+        document.getElementById('downloadRow').style.display = 'none';
+    }
+
+    // Timestamp
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('refreshInfo').textContent = `Last updated: ${now}  (auto-refresh 30 s)`;
+}
+
+function loadDashboard() {
+    fetch('/api/dashboard')
+        .then(r => {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(data => applyDashboard(data))
+        .catch(err => {
+            document.getElementById('refreshInfo').textContent =
+                'Refresh failed: ' + (err.message || 'network error');
+        });
+}
+
+loadDashboard();
+setInterval(loadDashboard, REFRESH_MS);
+</script>
+
+</body>
+</html>
